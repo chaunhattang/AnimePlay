@@ -30,6 +30,8 @@ public enum ErrorCode {
     UNAUTHORIZED(3002, "You do not have permission", HttpStatus.FORBIDDEN),
     INVALID_TOKEN(3003, "Invalid or expired token", HttpStatus.UNAUTHORIZED),
     INVALID_REQUEST(3004, "Invalid request", HttpStatus.BAD_REQUEST),
+
+    ANIME_NOT_FOUND(4001, "Anime not found", HttpStatus.NOT_FOUND),
     ;
 
     int code;

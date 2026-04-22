@@ -46,7 +46,8 @@ public class UserService {
     // Only Admin
     public List<UserResponse> getAllUsers() {
         return userRepository.findAll().stream()
-                .map(userMapper::toUserResponse).collect(Collectors.toList());
+                .map(userMapper::toUserResponse)
+                .collect(Collectors.toList());
     }
 
     public UserResponse getUserById(String id) {

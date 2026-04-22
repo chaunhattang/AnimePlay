@@ -4,31 +4,22 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
-import java.util.Date;
-
 @Entity
-@Setter
 @Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@Table(name = "forgot_password")
-public class ForgotPassword {
+@Table(name = "animes")
+public class Anime {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "fp_id")
     Integer id;
 
-    @Column(nullable = true)
-    Integer otp;
-
-    @Column(nullable = false)
-    Date expirationTime;
-
-    @Column(unique = true)
-    String resetToken;
-
-    @OneToOne
-    User user;
+    String title;
+    String description;
+    String posterUrl;
+    String year;
+    String genre;
 }

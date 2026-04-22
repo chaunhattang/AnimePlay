@@ -13,8 +13,7 @@ public interface UserMapper {
     User toUser(UserCreateRequest request);
 
     UserResponse toUserResponse(User user);
-
-    @Mapping(target = "password", ignore = true)
+    
     @Mapping(target = "avatarUrl", ignore = true)
     void updateUser(@MappingTarget User user, UserUpdateRequest request);
 }
