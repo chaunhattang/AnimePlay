@@ -1,0 +1,32 @@
+package com.backend.animeplay.exception;
+
+import com.backend.animeplay.dto.response.ApiResponse;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(value = AppException.class)
+    public ResponseEntity<ApiResponse<String>> handlingAppException(AppException exception) {
+        ErrorCode errorCode = exception.getErrorCode();
+
+        ApiResponse<String> apiResponse = ApiResponse.<String>builder()
+                .code(errorCode.getCode())
+                .message(errorCode.getMessage())
+                .build();
+
+        return ResponseEntity.badRequest().body(apiResponse);
+    }
+
+    @ExceptionHandler(value = Exception.class)
+    public ResponseEntity<ApiResponse<?>> handlingRuntimeException(Exception exception) {
+        ApiResponse<?> apiResponse = ApiResponse.builder()
+                .code(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode())
+                .message(exception.getMessage())
+                .build();
+
+        return ResponseEntity.internalServerError().body(apiResponse);
+    }
+}

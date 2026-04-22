@@ -9,5 +9,4 @@ public class AnimePlayApplication {
         SpringApplication.run(AnimePlayApplication.class, args);
         System.out.println("========Successfully Started=========");
     }
-
 }
