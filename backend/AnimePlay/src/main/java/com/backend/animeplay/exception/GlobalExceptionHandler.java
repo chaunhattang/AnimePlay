@@ -17,7 +17,9 @@ public class GlobalExceptionHandler {
                 .message(errorCode.getMessage())
                 .build();
 
-        return ResponseEntity.badRequest().body(apiResponse);
+        return ResponseEntity
+                .status(errorCode.getHttpStatusCode())
+                .body(apiResponse);
     }
 
     @ExceptionHandler(value = Exception.class)

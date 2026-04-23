@@ -39,11 +39,11 @@ public class AuthenticationService {
 
     @NonFinal
     @Value("${jwt.signerKey}")
-    protected String SIGNER_KEY;
+    private String SIGNER_KEY;
 
     @NonFinal
     @Value("${jwt.valid-duration}")
-    protected long VALID_DURATION;
+    private long VALID_DURATION;
 
     @NonFinal
     @Value("${google.client-id}")

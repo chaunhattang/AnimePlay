@@ -5,10 +5,12 @@ import com.backend.animeplay.dto.request.AnimeUpdateRequest;
 import com.backend.animeplay.dto.response.AnimeResponse;
 import com.backend.animeplay.dto.response.ApiResponse;
 import com.backend.animeplay.service.AnimeService;
+import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -16,7 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @RestController
-@RequestMapping("/animes")
+@RequestMapping("/anime")
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class AnimeController {
@@ -25,12 +27,24 @@ public class AnimeController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<AnimeResponse> createAnime(
-            @ModelAttribute AnimeCreateRequest request,
+            @ModelAttribute @Valid AnimeCreateRequest request,
             @RequestParam(value = "file", required = false) MultipartFile file
     ) {
         return ApiResponse.<AnimeResponse>builder()
                 .result(animeService.createAnime(request, file))
                 .message("Created Anime Successfully")
+                .build();
+    }
+
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Page<AnimeResponse>> getAllAnime(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return ApiResponse.<Page<AnimeResponse>>builder()
+                .result(animeService.getAllAnime(page, size))
+                .message("All Anime Got Successfully")
                 .build();
     }
 

@@ -7,8 +7,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Date;
 import java.util.Optional;
 
-public interface ForgotPasswordRepository extends JpaRepository<ForgotPassword, Long> {
-    Optional<ForgotPassword> findByOtpAndUserId(Integer otp, String UserId);
+public interface ForgotPasswordRepository extends JpaRepository<ForgotPassword, Integer> {
+    Optional<ForgotPassword> findByOtpAndUser_Id(Integer otp, String userId);
 
     Optional<ForgotPassword> findByResetToken(String resetToken);
 
