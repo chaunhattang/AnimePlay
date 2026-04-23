@@ -10,8 +10,10 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -23,12 +25,28 @@ import java.util.List;
 public class EpisodeServiceController {
     EpisodeService episodeService;
 
-    @PostMapping()
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<EpisodeResponse> createEpisode(@RequestBody @Valid EpisodeCreateRequest request) {
+    public ApiResponse<EpisodeResponse> createEpisode(
+            @ModelAttribute @Valid EpisodeCreateRequest request,
+            @RequestPart(value = "file", required = false) MultipartFile file
+    ) {
         return ApiResponse.<EpisodeResponse>builder()
-                .result(episodeService.createEpisode(request))
+                .result(episodeService.createEpisode(request, file))
                 .message("Created Episode Successfully")
+                .build();
+    }
+
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<EpisodeResponse> updateEpisodeById(
+            @PathVariable("id") Integer id,
+            @ModelAttribute EpisodeUpdateRequest request,
+            @RequestPart(value = "file", required = false) MultipartFile file
+    ) {
+        return ApiResponse.<EpisodeResponse>builder()
+                .result(episodeService.updateEpisodeById(id, request, file))
+                .message("Updated Episodes Successfully")
                 .build();
     }
 
@@ -48,19 +66,7 @@ public class EpisodeServiceController {
                 .message("Episodes Got Successfully")
                 .build();
     }
-
-    @PutMapping(value = "/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<EpisodeResponse> updateEpisodeById(
-            @PathVariable("id") Integer id,
-            @RequestBody @Valid EpisodeUpdateRequest request
-    ) {
-        return ApiResponse.<EpisodeResponse>builder()
-                .result(episodeService.updateEpisodeById(id, request))
-                .message("Updated Episode Successfully")
-                .build();
-    }
-
+    
     @DeleteMapping(value = "/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<String> deleteEpisodes(@PathVariable("id") Integer id) {

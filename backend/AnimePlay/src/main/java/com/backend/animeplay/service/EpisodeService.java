@@ -5,37 +5,71 @@ import com.backend.animeplay.dto.request.EpisodeUpdateRequest;
 import com.backend.animeplay.dto.response.EpisodeResponse;
 import com.backend.animeplay.entity.Anime;
 import com.backend.animeplay.entity.Episode;
+import com.backend.animeplay.enums.VideoEnum;
 import com.backend.animeplay.exception.AppException;
 import com.backend.animeplay.exception.ErrorCode;
 import com.backend.animeplay.mapper.EpisodeMapper;
-import com.backend.animeplay.repository.AnimeRepository;
 import com.backend.animeplay.repository.EpisodeRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class EpisodeService {
     EpisodeRepository episodeRepository;
     EpisodeMapper episodeMapper;
-    AnimeRepository animeRepository;
+    FileStorageService fileStorageService;
 
     @Transactional
-    public EpisodeResponse createEpisode(EpisodeCreateRequest request) {
-        Anime anime = animeRepository.findById(request.getAnimeId())
-                .orElseThrow(() -> new AppException(ErrorCode.ANIME_NOT_FOUND));
-
+    public EpisodeResponse createEpisode(EpisodeCreateRequest request, MultipartFile file) {
         Episode episode = episodeMapper.toEpisode(request);
-        episode.setAnime(anime);
+
+        if (request.getVideoType() == VideoEnum.LOCAL) {
+            if (file != null && !file.isEmpty()) {
+                episode.setVideoUrl(fileStorageService.storeVideoFile(file));
+            } else {
+                throw new AppException(ErrorCode.INVALID_REQUEST);
+            }
+        } else {
+            if (request.getVideoUrl() == null || request.getVideoUrl().isEmpty()) {
+                throw new AppException(ErrorCode.INVALID_REQUEST);
+            }
+        }
+
+        return episodeMapper.toEpisodeResponse(episodeRepository.save(episode));
+    }
+
+    @Transactional
+    public EpisodeResponse updateEpisodeById(Integer id, EpisodeUpdateRequest request, MultipartFile file) {
+        Episode episode = episodeRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.EPISODE_NOT_FOUND));
+
+        Anime anime = episode.getAnime();
+
+        if (request.getEpisodeNumber() != null) {
+            episode.setEpisodeNumber(request.getEpisodeNumber());
+        }
+        if (request.getAnimeId() != null) {
+            episode.setAnime(anime);
+        }
+
+        if (request.getVideoType() == VideoEnum.LOCAL) {
+            if (file != null && !file.isEmpty()) {
+                episode.setVideoUrl(fileStorageService.storeVideoFile(file));
+            }
+        } else if (request.getVideoType() != null) {
+            if (request.getVideoUrl() != null) {
+                episode.setVideoUrl(request.getVideoUrl());
+            }
+        }
 
         return episodeMapper.toEpisodeResponse(episodeRepository.save(episode));
     }
@@ -51,19 +85,8 @@ public class EpisodeService {
                 .collect(Collectors.toList());
     }
 
-
-    @Transactional
-    public EpisodeResponse updateEpisodeById(Integer id, EpisodeUpdateRequest request) {
-        Episode episode = episodeRepository.findById(id)
-                .orElseThrow(() -> new AppException(ErrorCode.EPISODE_NOT_FOUND));
-
-        episodeMapper.updateEpisode(episode, request);
-
-        return episodeMapper.toEpisodeResponse(episodeRepository.save(episode));
-    }
-
     public String deleteEpisodeById(Integer id) {
         episodeRepository.deleteById(id);
-        return "Successfully deleted episode by Episode Id: " + id;
+        return "Successfully deleted episode by: " + id;
     }
 }
