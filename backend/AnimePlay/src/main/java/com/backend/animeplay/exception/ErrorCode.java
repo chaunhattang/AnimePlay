@@ -32,6 +32,7 @@ public enum ErrorCode {
     INVALID_REQUEST(3004, "Invalid request", HttpStatus.BAD_REQUEST),
 
     ANIME_NOT_FOUND(4001, "Anime not found", HttpStatus.NOT_FOUND),
+    EPISODE_NOT_FOUND(4002, "Episode not found", HttpStatus.NOT_FOUND),
     ;
 
     int code;

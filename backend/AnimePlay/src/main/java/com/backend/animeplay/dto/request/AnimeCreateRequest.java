@@ -14,5 +14,6 @@ public class AnimeCreateRequest {
     String description;
     String year;
     String genre;
-    //    String posterUrl;
+    String posterUrl;
+    String trailerUrl;
 }

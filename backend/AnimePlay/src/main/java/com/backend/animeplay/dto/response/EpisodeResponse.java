@@ -9,12 +9,12 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class AnimeResponse {
+public class EpisodeResponse {
     Integer id;
-    String title;
-    String description;
-    String year;
-    String genre;
-    String posterUrl;
-    String trailerUrl;
+
+    Integer animeId;
+
+    Integer episodeNumber;
+
+    String videoUrl;
 }

@@ -19,8 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.function.Consumer;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -53,21 +51,22 @@ public class AnimeService {
                 .map(animeMapper::toAnimeResponse);
     }
 
-    private void updateIfPresent(String value, Consumer<String> setter) {
-        if (value != null && !value.trim().isEmpty()) {
-            setter.accept(value);
-        }
-    }
+//    private void updateIfPresent(String value, Consumer<String> setter) {
+//        if (value != null && !value.trim().isEmpty()) {
+//            setter.accept(value);
+//        }
+//    }
 
     @Transactional
     public AnimeResponse updateAnimeById(Integer id, AnimeUpdateRequest request, MultipartFile file) {
         Anime anime = animeRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.ANIME_NOT_FOUND));
 
-        updateIfPresent(request.getTitle(), anime::setTitle);
-        updateIfPresent(request.getDescription(), anime::setDescription);
-        updateIfPresent(request.getYear(), anime::setYear);
-        updateIfPresent(request.getGenre(), anime::setGenre);
+        animeMapper.updateAnime(anime, request);
+//        updateIfPresent(request.getTitle(), anime::setTitle);
+//        updateIfPresent(request.getDescription(), anime::setDescription);
+//        updateIfPresent(request.getYear(), anime::setYear);
+//        updateIfPresent(request.getGenre(), anime::setGenre);
 
         if (file != null && !file.isEmpty()) {
             String fileName = cloudinaryService.uploadImage(file);
@@ -81,6 +80,6 @@ public class AnimeService {
 
     public String deleteAnimeById(Integer id) {
         animeRepository.deleteById(id);
-        return "Successfully deleted anime";
+        return "Successfully deleted anime by Anime Id: " + id;
     }
 }

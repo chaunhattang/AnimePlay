@@ -86,6 +86,6 @@ public class UserService {
 
     public String deleteById(String id) {
         userRepository.deleteById(id);
-        return "Deleted by " + id;
+        return "Deleted User Successfully by User Id: " + id;
     }
 }

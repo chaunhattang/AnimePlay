@@ -1,9 +1,6 @@
 package com.backend.animeplay.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -14,16 +11,16 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class Anime {
+public class Episode {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
 
-    String title;
-    String description;
-    String year;
-    String genre;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "anime_id")
+    Anime anime;
 
-    String posterUrl;
-    String trailerUrl;
+    Integer episodeNumber;
+
+    String videoUrl;
 }

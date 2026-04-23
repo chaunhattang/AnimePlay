@@ -1,5 +1,6 @@
 package com.backend.animeplay.dto.request;
 
+import com.backend.animeplay.enums.VideoEnum;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -9,11 +10,12 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class AnimeUpdateRequest {
-    String title;
-    String description;
-    String year;
-    String genre;
-    String posterUrl;
-    String trailerUrl;
+public class EpisodeUpdateRequest {
+    Integer animeId;
+
+    Integer episodeNumber;
+
+    String videoUrl;
+
+    VideoEnum videoType;
 }
