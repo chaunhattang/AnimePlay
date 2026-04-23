@@ -10,7 +10,7 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class AnimeResponse {
-    String id;
+    Integer id;
     String title;
     String description;
     String posterUrl;

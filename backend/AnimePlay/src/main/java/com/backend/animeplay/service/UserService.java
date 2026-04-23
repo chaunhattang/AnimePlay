@@ -13,12 +13,13 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -37,17 +38,17 @@ public class UserService {
             throw new AppException(ErrorCode.USER_ALREADY_EXISTS);
         }
         User user = userMapper.toUser(request);
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(RoleEnum.valueOf(request.getRole()));
 
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
     // Only Admin
-    public List<UserResponse> getAllUsers() {
-        return userRepository.findAll().stream()
-                .map(userMapper::toUserResponse)
-                .collect(Collectors.toList());
+    public Page<UserResponse> getAllUsers(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return userRepository.findAll(pageable)
+                .map(userMapper::toUserResponse);
     }
 
     public UserResponse getUserById(String id) {
@@ -57,6 +58,7 @@ public class UserService {
         return userMapper.toUserResponse(user);
     }
 
+    @Transactional
     public UserResponse updateUserById(String id, UserUpdateRequest request, MultipartFile file) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));

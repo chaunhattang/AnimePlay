@@ -13,11 +13,9 @@ import java.util.Date;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@Table(name = "forgot_password")
 public class ForgotPassword {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "fp_id")
     Integer id;
 
     @Column(nullable = true)

@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.Map;
 
 @Slf4j
 @Service
@@ -26,7 +25,7 @@ public class CloudinaryService {
             return null;
         }
         try {
-            Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
+            var uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
             String originalUrl = uploadResult.get("secure_url").toString();
 
             return originalUrl.replace("/upload/", "/upload/f_auto,q_auto/");

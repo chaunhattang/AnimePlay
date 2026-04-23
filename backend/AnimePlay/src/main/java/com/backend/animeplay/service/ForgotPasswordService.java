@@ -16,6 +16,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.Random;
@@ -31,7 +32,7 @@ public class ForgotPasswordService {
     PasswordEncoder passwordEncoder;
 
     public void sendOtp(String email) {
-        User user = userRepository.findByUsername(email)
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         int otp = new Random().nextInt(900_000) + 100_000;
@@ -56,7 +57,7 @@ public class ForgotPasswordService {
         User user = userRepository.findByUsername(request.getEmail())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        ForgotPassword forgotPassword = forgotPasswordRepository.findByOtpAndUserId(request.getOtp(), user.getId())
+        ForgotPassword forgotPassword = forgotPasswordRepository.findByOtpAndUser_Id(request.getOtp(), user.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.WRONG_OTP));
 
         if (forgotPassword.getExpirationTime().before(new Date())) {
@@ -73,6 +74,7 @@ public class ForgotPasswordService {
         return resetToken;
     }
 
+    @Transactional
     public void changePassword(UpdatePasswordRequest request) {
         ForgotPassword forgotPassword = forgotPasswordRepository.findByResetToken(request.getResetToken())
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST));

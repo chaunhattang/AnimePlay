@@ -6,7 +6,6 @@ import com.backend.animeplay.dto.request.UserCreateRequest;
 import com.backend.animeplay.dto.response.ApiResponse;
 import com.backend.animeplay.dto.response.AuthenticationResponse;
 import com.backend.animeplay.dto.response.UserResponse;
-import com.backend.animeplay.enums.RoleEnum;
 import com.backend.animeplay.service.AuthenticationService;
 import com.backend.animeplay.service.UserService;
 import jakarta.validation.Valid;
@@ -31,7 +30,6 @@ public class AuthenticationController {
 
     @PostMapping("/register")
     public ApiResponse<UserResponse> register(@RequestBody @Valid UserCreateRequest request) {
-        request.setRole(RoleEnum.USER.name());
         return ApiResponse.<UserResponse>builder()
                 .result(userService.createUser(request))
                 .message("Register Successfully")

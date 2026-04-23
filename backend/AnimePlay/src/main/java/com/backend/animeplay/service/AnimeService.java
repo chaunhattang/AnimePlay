@@ -12,12 +12,14 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -28,6 +30,7 @@ public class AnimeService {
     AnimeMapper animeMapper;
     CloudinaryService cloudinaryService;
 
+    @Transactional
     public AnimeResponse createAnime(AnimeCreateRequest request, MultipartFile file) {
         Anime anime = animeMapper.toAnime(request);
         if (file != null && !file.isEmpty()) {
@@ -44,10 +47,10 @@ public class AnimeService {
                 .orElseThrow(() -> new AppException(ErrorCode.ANIME_NOT_FOUND)));
     }
 
-    public List<AnimeResponse> getAnimeList() {
-        return animeRepository.findAll().stream()
-                .map(animeMapper::toAnimeResponse)
-                .collect(Collectors.toList());
+    public Page<AnimeResponse> getAllAnime(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return animeRepository.findAll(pageable)
+                .map(animeMapper::toAnimeResponse);
     }
 
     private void updateIfPresent(String value, Consumer<String> setter) {
@@ -56,6 +59,7 @@ public class AnimeService {
         }
     }
 
+    @Transactional
     public AnimeResponse updateAnimeById(Integer id, AnimeUpdateRequest request, MultipartFile file) {
         Anime anime = animeRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.ANIME_NOT_FOUND));
