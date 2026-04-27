@@ -145,10 +145,11 @@ export const apiClient = {
     });
   },
 
-  createUser(token: string, payload: CreateUserRequest) {
+  createUser(token: string, payload: CreateUserRequest | FormData) {
+    const body = payload instanceof FormData ? payload : JSON.stringify(payload);
     return request<User>("/auth/create", {
       method: "POST",
-      body: JSON.stringify(payload),
+      body,
       token,
     });
   },

@@ -10,15 +10,7 @@ type MessageState = {
   text: string;
 } | null;
 
-function MovieRow({
-  movie,
-  onUpdate,
-  onDelete
-}: {
-  movie: Movie;
-  onUpdate: (movieId: number, event: FormEvent<HTMLFormElement>) => Promise<void>;
-  onDelete: (movieId: number) => Promise<void>;
-}) {
+function MovieRow({ movie, onUpdate, onDelete }: { movie: Movie; onUpdate: (movieId: number, event: FormEvent<HTMLFormElement>) => Promise<void>; onDelete: (movieId: number) => Promise<void> }) {
   return (
     <details className="rounded-lg border border-white/10 bg-white/5 p-4">
       <summary className="cursor-pointer list-none text-sm font-semibold">
@@ -29,39 +21,15 @@ function MovieRow({
           <input name="title" defaultValue={movie.title} className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
           <input name="year" defaultValue={movie.year} className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
           <input name="genre" defaultValue={movie.genre} className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
-          <input
-            name="trailerUrl"
-            defaultValue={movie.trailerUrl || ""}
-            className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3"
-          />
-          <input
-            name="posterUrl"
-            defaultValue={movie.posterUrl || ""}
-            className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3"
-          />
-          <input
-            name="posterFile"
-            type="file"
-            accept="image/*"
-            className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3"
-          />
-          <textarea
-            name="description"
-            defaultValue={movie.description}
-            className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3"
-            rows={4}
-            required
-          />
+          <input name="trailerUrl" defaultValue={movie.trailerUrl || ""} className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3" />
+          <input name="posterFile" type="file" accept="image/*" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3" />
+          <textarea name="description" defaultValue={movie.description} className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3" rows={4} required />
         </div>
         <div className="flex items-center gap-2">
           <button type="submit" className="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-semibold">
             Update Movie
           </button>
-          <button
-            type="button"
-            onClick={() => void onDelete(movie.id)}
-            className="rounded-md border border-red-400/50 px-3 py-1.5 text-sm text-red-300"
-          >
+          <button type="button" onClick={() => void onDelete(movie.id)} className="rounded-md border border-red-400/50 px-3 py-1.5 text-sm text-red-300">
             Delete Movie
           </button>
         </div>
@@ -106,8 +74,7 @@ export default function AdminMoviesPage() {
       genre: String(formData.get("genre") || ""),
       description: String(formData.get("description") || ""),
       trailerUrl: String(formData.get("trailerUrl") || ""),
-      posterUrl: String(formData.get("posterUrl") || ""),
-      posterFile: (formData.get("posterFile") as File) || null
+      posterFile: (formData.get("posterFile") as File) || null,
     });
 
     if (!result.ok) {
@@ -130,8 +97,7 @@ export default function AdminMoviesPage() {
       genre: String(formData.get("genre") || ""),
       description: String(formData.get("description") || ""),
       trailerUrl: String(formData.get("trailerUrl") || ""),
-      posterUrl: String(formData.get("posterUrl") || ""),
-      posterFile: (formData.get("posterFile") as File) || null
+      posterFile: (formData.get("posterFile") as File) || null,
     });
 
     if (!result.ok) {
@@ -164,7 +130,6 @@ export default function AdminMoviesPage() {
           <input name="year" placeholder="Year" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
           <input name="genre" placeholder="Genre (comma separated)" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
           <input name="trailerUrl" placeholder="Trailer URL" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3" />
-          <input name="posterUrl" placeholder="Poster URL" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3" />
           <input name="posterFile" type="file" accept="image/*" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3" />
           <textarea name="description" placeholder="Description" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3" rows={4} required />
         </div>
@@ -173,9 +138,7 @@ export default function AdminMoviesPage() {
         </button>
       </form>
 
-      {message ? (
-        <p className={message.type === "error" ? "text-sm text-red-300" : "text-sm text-green-300"}>{message.text}</p>
-      ) : null}
+      {message ? <p className={message.type === "error" ? "text-sm text-red-300" : "text-sm text-green-300"}>{message.text}</p> : null}
 
       <div className="space-y-3">
         {movies.map((movie) => (

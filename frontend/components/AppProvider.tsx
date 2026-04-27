@@ -30,6 +30,7 @@ type CreateUserInput = {
   password: string;
   fullName: string;
   avatarUrl?: string;
+  avatarFile?: File | null;
   role: UserRole;
 };
 
@@ -120,7 +121,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       page: 0,
       size: 100,
       sortBy: "id",
-      sortDir: "desc"
+      sortDir: "desc",
     });
     setMovies(page.content || []);
   }, []);
@@ -144,7 +145,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setUsers([]);
       }
     },
-    [loadAdminUsers]
+    [loadAdminUsers],
   );
 
   useEffect(() => {
@@ -214,7 +215,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const formData = new FormData();
       appendIfPresent(formData, "fullName", input.fullName);
-      appendIfPresent(formData, "avatarUrl", input.avatarUrl);
+      // avatar should be uploaded as a file, not a raw URL string
       appendIfPresent(formData, "oldPassword", input.oldPassword);
       appendIfPresent(formData, "newPassword", input.newPassword);
       if (input.avatarFile) {
@@ -258,7 +259,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return { ok: false, error: "Admin permission required." };
     }
     try {
-      const created = await apiClient.createUser(token, input);
+      const formData = new FormData();
+      appendIfPresent(formData, "username", input.username);
+      appendIfPresent(formData, "email", input.email);
+      appendIfPresent(formData, "fullName", input.fullName);
+      appendIfPresent(formData, "password", input.password);
+      appendIfPresent(formData, "role", input.role);
+      if (input.avatarFile) {
+        formData.append("file", input.avatarFile);
+      }
+
+      const created = await apiClient.createUser(token, formData);
       setUsers((prev) => [created, ...prev]);
       return { ok: true };
     } catch (error) {
@@ -275,7 +286,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       appendIfPresent(formData, "username", input.username);
       appendIfPresent(formData, "email", input.email);
       appendIfPresent(formData, "fullName", input.fullName);
-      appendIfPresent(formData, "avatarUrl", input.avatarUrl);
       appendIfPresent(formData, "password", input.password);
       appendIfPresent(formData, "role", input.role);
       if (input.avatarFile) {
@@ -322,7 +332,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       appendIfPresent(formData, "year", input.year);
       appendIfPresent(formData, "genre", input.genre);
       appendIfPresent(formData, "trailerUrl", input.trailerUrl);
-      appendIfPresent(formData, "posterUrl", input.posterUrl);
       if (input.posterFile) {
         formData.append("file", input.posterFile);
       }
@@ -346,18 +355,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       appendIfPresent(formData, "year", input.year);
       appendIfPresent(formData, "genre", input.genre);
       appendIfPresent(formData, "trailerUrl", input.trailerUrl);
-      appendIfPresent(formData, "posterUrl", input.posterUrl);
       if (input.posterFile) {
         formData.append("file", input.posterFile);
       }
 
       const updated = await apiClient.updateAnime(token, movieId, formData);
       setMovies((prev) => prev.map((item) => (item.id === movieId ? updated : item)));
-      setFavorites((prev) =>
-        prev.map((favorite) =>
-          favorite.anime.id === movieId ? { ...favorite, anime: updated } : favorite
-        )
-      );
+      setFavorites((prev) => prev.map((favorite) => (favorite.anime.id === movieId ? { ...favorite, anime: updated } : favorite)));
       return { ok: true };
     } catch (error) {
       return { ok: false, error: getErrorMessage(error, "Cannot update movie.") };
@@ -399,9 +403,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       deleteUser,
       createMovie,
       updateMovie,
-      deleteMovie
+      deleteMovie,
     }),
-    [loading, users, movies, favorites, currentUser, isAdmin]
+    [loading, users, movies, favorites, currentUser, isAdmin],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

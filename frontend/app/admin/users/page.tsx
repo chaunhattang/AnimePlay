@@ -10,50 +10,15 @@ type MessageState = {
   text: string;
 } | null;
 
-function UserRow({
-  user,
-  onUpdate,
-  onDelete,
-  canDelete
-}: {
-  user: User;
-  onUpdate: (userId: string, event: FormEvent<HTMLFormElement>) => Promise<void>;
-  onDelete: (userId: string) => Promise<void>;
-  canDelete: boolean;
-}) {
+function UserRow({ user, onUpdate, onDelete, canDelete }: { user: User; onUpdate: (userId: string, event: FormEvent<HTMLFormElement>) => Promise<void>; onDelete: (userId: string) => Promise<void>; canDelete: boolean }) {
   return (
     <form onSubmit={(event) => void onUpdate(user.id, event)} className="grid gap-2 rounded-lg border border-white/10 bg-white/5 p-4">
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        <input
-          name="fullName"
-          defaultValue={user.fullName}
-          className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm"
-          required
-        />
-        <input
-          name="username"
-          defaultValue={user.username}
-          className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm"
-          required
-        />
-        <input
-          name="email"
-          type="email"
-          defaultValue={user.email}
-          className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm"
-          required
-        />
-        <input
-          name="password"
-          type="password"
-          placeholder="New password (optional)"
-          className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm"
-        />
-        <input
-          name="avatarUrl"
-          defaultValue={user.avatarUrl || ""}
-          className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-2"
-        />
+        <input name="fullName" defaultValue={user.fullName} className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
+        <input name="username" defaultValue={user.username} className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
+        <input name="email" type="email" defaultValue={user.email} className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
+        <input name="password" type="password" placeholder="New password (optional)" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" />
+        <input name="avatarFile" type="file" accept="image/*" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-2" />
         <select name="role" defaultValue={user.role} className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm">
           <option value="USER">USER</option>
           <option value="ADMIN">ADMIN</option>
@@ -65,12 +30,7 @@ function UserRow({
           <button type="submit" className="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-semibold">
             Update
           </button>
-          <button
-            type="button"
-            onClick={() => void onDelete(user.id)}
-            disabled={!canDelete}
-            className="rounded-md border border-red-400/50 px-3 py-1.5 text-sm text-red-300 disabled:opacity-40"
-          >
+          <button type="button" onClick={() => void onDelete(user.id)} disabled={!canDelete} className="rounded-md border border-red-400/50 px-3 py-1.5 text-sm text-red-300 disabled:opacity-40">
             Delete
           </button>
         </div>
@@ -114,8 +74,8 @@ export default function AdminUsersPage() {
       username: String(formData.get("username") || ""),
       email: String(formData.get("email") || ""),
       password: String(formData.get("password") || ""),
-      avatarUrl: String(formData.get("avatarUrl") || ""),
-      role: (String(formData.get("role") || "USER").toUpperCase() as "ADMIN" | "USER")
+      avatarFile: (formData.get("avatarFile") as File) || null,
+      role: String(formData.get("role") || "USER").toUpperCase() as "ADMIN" | "USER",
     });
 
     if (!result.ok) {
@@ -137,8 +97,8 @@ export default function AdminUsersPage() {
       username: String(formData.get("username") || ""),
       email: String(formData.get("email") || ""),
       password: String(formData.get("password") || ""),
-      avatarUrl: String(formData.get("avatarUrl") || ""),
-      role: (String(formData.get("role") || "USER").toUpperCase() as "ADMIN" | "USER")
+      avatarFile: (formData.get("avatarFile") as File) || null,
+      role: String(formData.get("role") || "USER").toUpperCase() as "ADMIN" | "USER",
     });
 
     if (!result.ok) {
@@ -172,7 +132,7 @@ export default function AdminUsersPage() {
           <input name="username" placeholder="Username" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
           <input name="email" type="email" placeholder="Email" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
           <input name="password" type="password" placeholder="Password" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
-          <input name="avatarUrl" placeholder="Avatar URL" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-2" />
+          <input name="avatarFile" type="file" accept="image/*" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-2" />
           <select name="role" defaultValue="USER" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm">
             <option value="USER">USER</option>
             <option value="ADMIN">ADMIN</option>
@@ -183,19 +143,11 @@ export default function AdminUsersPage() {
         </button>
       </form>
 
-      {message ? (
-        <p className={message.type === "error" ? "text-sm text-red-300" : "text-sm text-green-300"}>{message.text}</p>
-      ) : null}
+      {message ? <p className={message.type === "error" ? "text-sm text-red-300" : "text-sm text-green-300"}>{message.text}</p> : null}
 
       <div className="space-y-3">
         {users.map((user) => (
-          <UserRow
-            key={user.id}
-            user={user}
-            onUpdate={onUpdateUser}
-            onDelete={onDeleteUser}
-            canDelete={currentUser.id !== user.id}
-          />
+          <UserRow key={user.id} user={user} onUpdate={onUpdateUser} onDelete={onDeleteUser} canDelete={currentUser.id !== user.id} />
         ))}
       </div>
     </div>
