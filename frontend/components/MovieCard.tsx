@@ -6,13 +6,14 @@ import { Clock3 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Movie } from "@/lib/types";
 import WatchlistButton from "@/components/WatchlistButton";
+import { getMediaUrl } from "@/lib/api-client";
 
 type MovieCardProps = {
   movie: Movie;
 };
 
 export default function MovieCard({ movie }: MovieCardProps) {
-  const posterUrl = movie.posterUrl || "https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg";
+  const posterUrl = getMediaUrl(movie.posterUrl);
   const cardVariants = {
     hidden: { opacity: 0, y: 8 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: "easeOut" } },
