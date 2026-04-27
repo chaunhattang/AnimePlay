@@ -4,6 +4,8 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppContext } from "@/components/AppProvider";
+import { UserPlus, User, Mail, Lock, ArrowRight, Sparkles } from "lucide-react";
+import clsx from "clsx";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -35,54 +37,89 @@ export default function RegisterPage() {
     router.push("/");
   };
 
+  const inputClasses = "w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-gray-500 outline-none transition-all duration-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 hover:border-white/25";
+
   return (
-    <div className="mx-auto w-full max-w-md space-y-5 rounded-lg border border-white/10 bg-white/5 p-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold">Register</h1>
-        <p className="text-sm text-gray-400">Create account with username, email and password.</p>
+    <div className="mx-auto w-full max-w-md">
+      {/* Animated card container */}
+      <div className="animate-scale-in overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-card backdrop-blur">
+        {/* Header with gradient */}
+        <div className="relative overflow-hidden border-b border-white/10 bg-gradient-to-r from-brand-600/20 via-purple-600/10 to-transparent px-6 py-8 text-center">
+          <div className="absolute -right-4 -top-4 h-24 w-24 animate-spin-slow rounded-full border-2 border-brand-500/20" />
+          <div className="absolute -bottom-6 -left-6 h-16 w-16 animate-spin-slow rounded-full border-2 border-purple-500/20 [animation-direction:reverse]" />
+
+          <div className="relative mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-600 shadow-glow">
+            <Sparkles className="h-7 w-7 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-white">Create Account</h1>
+          <p className="mt-1 text-sm text-gray-400">Join our anime community today</p>
+        </div>
+
+        <div className="space-y-5 p-6">
+          <form onSubmit={onSubmit} className="space-y-4">
+            {/* Username Field */}
+            <div className="space-y-1.5">
+              <label htmlFor="username" className="flex items-center gap-2 text-sm font-medium text-gray-300">
+                <User className="h-4 w-4 text-brand-500" />
+                Username
+                <span className="text-brand-500">*</span>
+              </label>
+              <input id="username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="Choose a username" className={clsx(inputClasses, error && "border-red-500/50")} required autoComplete="username" />
+            </div>
+
+            {/* Email Field */}
+            <div className="space-y-1.5">
+              <label htmlFor="email" className="flex items-center gap-2 text-sm font-medium text-gray-300">
+                <Mail className="h-4 w-4 text-brand-500" />
+                Email Address
+                <span className="text-brand-500">*</span>
+              </label>
+              <input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Enter your email" className={clsx(inputClasses, error && "border-red-500/50")} required autoComplete="email" />
+            </div>
+
+            {/* Password Field */}
+            <div className="space-y-1.5">
+              <label htmlFor="password" className="flex items-center gap-2 text-sm font-medium text-gray-300">
+                <Lock className="h-4 w-4 text-brand-500" />
+                Password
+                <span className="text-brand-500">*</span>
+              </label>
+              <input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Create a strong password" className={clsx(inputClasses, error && "border-red-500/50")} required autoComplete="new-password" />
+            </div>
+
+            {/* Error Message */}
+            {error && <div className="animate-shake rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>}
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={submitting}
+              className={clsx("btn-lift flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition-all duration-200", "hover:bg-brand-500 focus:ring-2 focus:ring-brand-500/30", submitting && "cursor-not-allowed opacity-70")}
+            >
+              {submitting ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  Creating account...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="h-4 w-4" />
+                  Create Account
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Login Link */}
+          <div className="flex items-center justify-center gap-2 border-t border-white/10 pt-5 text-sm">
+            <span className="text-gray-400">Already have an account?</span>
+            <Link href="/login" className="group inline-flex items-center gap-1 font-medium text-brand-500 transition hover:text-brand-400">
+              Sign in
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </div>
+        </div>
       </div>
-
-      <form onSubmit={onSubmit} className="space-y-3">
-        <input
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-          placeholder="Username"
-          className="w-full rounded-md border border-white/15 bg-black px-3 py-2 text-sm"
-          required
-        />
-        <input
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder="Email"
-          className="w-full rounded-md border border-white/15 bg-black px-3 py-2 text-sm"
-          required
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder="Password"
-          className="w-full rounded-md border border-white/15 bg-black px-3 py-2 text-sm"
-          required
-        />
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-70"
-        >
-          {submitting ? "Registering..." : "Register"}
-        </button>
-      </form>
-
-      {error ? <p className="text-sm text-red-300">{error}</p> : null}
-
-      <p className="text-sm text-gray-300">
-        Already have account?{" "}
-        <Link href="/login" className="text-brand-500 hover:text-brand-600">
-          Login
-        </Link>
-      </p>
     </div>
   );
 }

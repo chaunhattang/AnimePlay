@@ -39,7 +39,7 @@ public class SecurityConfig {
             "/auth/forgot-password", "/auth/verify-otp", "/auth/change-password"
     };
     final String[] PUBLIC_GET_ENDPOINTS = {
-            "/anime/**", "/episodes/**", "/videos/**", "/images/**"
+            "/anime/**", "/episodes/**", "/videos/**", "/images/**", "/uploads/**"
     };
 
     @NonFinal
@@ -82,9 +82,10 @@ public class SecurityConfig {
                 .map(String::trim)
                 .filter(origin -> !origin.isEmpty())
                 .collect(Collectors.toList());
-        configuration.setAllowedOriginPatterns(
-                allowedOrigins.isEmpty() ? List.of("http://localhost:3000") : allowedOrigins
-        );
+//        configuration.setAllowedOriginPatterns(
+//                allowedOrigins.isEmpty() ? List.of("http://localhost:3000") : allowedOrigins
+//        );
+        configuration.setAllowedOriginPatterns(List.of("*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 
         configuration.setAllowedHeaders(List.of("*"));

@@ -11,5 +11,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class AnimePlayApplication {
     public static void main(String[] args) {
         SpringApplication.run(AnimePlayApplication.class, args);
+        System.out.println("==========Successfully Running Anime Play Application==========");
     }
 }

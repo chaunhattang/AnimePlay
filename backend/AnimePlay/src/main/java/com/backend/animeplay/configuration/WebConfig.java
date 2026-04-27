@@ -14,12 +14,19 @@ public class WebConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         Path videoUploadDir = Paths.get("uploads/videos");
         String videoUploadPath = videoUploadDir.toFile().getAbsolutePath();
+
         Path imageUploadDir = Paths.get("uploads/images");
         String imageUploadPath = imageUploadDir.toFile().getAbsolutePath();
 
+        Path rootUploadDir = Paths.get("uploads");
+        String rootUploadPath = rootUploadDir.toFile().getAbsolutePath();
+
         registry.addResourceHandler("/videos/**")
-                .addResourceLocations("file:" + videoUploadPath + "/");
+                .addResourceLocations("file:///" + videoUploadPath + "/");
         registry.addResourceHandler("/images/**")
-                .addResourceLocations("file:" + imageUploadPath + "/");
+                .addResourceLocations("file:///" + imageUploadPath + "/");
+
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations("file:///" + rootUploadPath + "/");
     }
 }
