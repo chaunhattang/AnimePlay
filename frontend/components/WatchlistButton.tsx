@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAppContext } from "@/components/AppProvider";
 
 type WatchlistButtonProps = {
-  movieId: string;
+  movieId: number;
 };
 
 export default function WatchlistButton({ movieId }: WatchlistButtonProps) {
@@ -14,12 +14,12 @@ export default function WatchlistButton({ movieId }: WatchlistButtonProps) {
   const router = useRouter();
   const saved = isInWatchlist(movieId);
 
-  const onClick = () => {
+  const onClick = async () => {
     if (!currentUser) {
       router.push("/login");
       return;
     }
-    toggleWatchlist(movieId);
+    await toggleWatchlist(movieId);
   };
 
   return (

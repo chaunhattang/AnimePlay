@@ -17,7 +17,7 @@ function MoviesContent() {
 
   const query = searchParams.get("q") || "";
   const genre = searchParams.get("genre") || "";
-  const sort = (searchParams.get("sort") as SortBy) || "popular";
+  const sort = (searchParams.get("sort") as SortBy) || "latest";
   const page = Math.max(1, Number(searchParams.get("page") || "1") || 1);
 
   const filtered = filterMovies(movies, {
@@ -42,7 +42,7 @@ function MoviesContent() {
     <div className="space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-bold">Browse Movies</h1>
-        <p className="text-sm text-gray-400">Search, sort, and filter by genre to find your next movie.</p>
+        <p className="text-sm text-gray-400">Search, sort, and filter anime from backend API.</p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-[1fr_auto]">

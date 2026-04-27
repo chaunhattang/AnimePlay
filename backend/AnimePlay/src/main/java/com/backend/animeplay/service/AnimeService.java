@@ -12,9 +12,12 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,59 +29,64 @@ import org.springframework.web.multipart.MultipartFile;
 public class AnimeService {
     AnimeRepository animeRepository;
     AnimeMapper animeMapper;
-    CloudinaryService cloudinaryService;
+    FileStorageService fileStorageService;
 
     @Transactional
+    @CacheEvict(value = {"animeById", "animeSearch"}, allEntries = true)
     public AnimeResponse createAnime(AnimeCreateRequest request, MultipartFile file) {
         Anime anime = animeMapper.toAnime(request);
         if (file != null && !file.isEmpty()) {
-            String fileName = cloudinaryService.uploadImage(file);
-            if (fileName != null) {
-                anime.setPosterUrl(fileName);
-            }
+            anime.setPosterUrl(fileStorageService.storeImageFile(file));
         }
         return animeMapper.toAnimeResponse(animeRepository.save(anime));
     }
 
+    @Cacheable(value = "animeById", key = "#id")
     public AnimeResponse getAnimeById(Integer id) {
         return animeMapper.toAnimeResponse(animeRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.ANIME_NOT_FOUND)));
     }
 
-    public Page<AnimeResponse> getAllAnime(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        return animeRepository.findAll(pageable)
+    @Cacheable(value = "animeSearch", key = "T(String).format('%s|%s|%s|%s|%s|%s', #page, #size, #search, #genre, #sortBy, #sortDir)")
+    public Page<AnimeResponse> getAnime(int page, int size, String search, String genre, String sortBy, String sortDir) {
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        String safeSortBy = switch (sortBy == null ? "" : sortBy) {
+            case "title", "year", "genre", "id" -> sortBy;
+            default -> "id";
+        };
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, safeSortBy));
+
+        String normalizedSearch = search == null ? "" : search.trim();
+        String normalizedGenre = genre == null ? "" : genre.trim();
+
+        return animeRepository.findByTitleContainingIgnoreCaseAndGenreContainingIgnoreCase(
+                        normalizedSearch,
+                        normalizedGenre,
+                        pageable
+                )
                 .map(animeMapper::toAnimeResponse);
     }
 
-//    private void updateIfPresent(String value, Consumer<String> setter) {
-//        if (value != null && !value.trim().isEmpty()) {
-//            setter.accept(value);
-//        }
-//    }
-
     @Transactional
+    @CacheEvict(value = {"animeById", "animeSearch"}, allEntries = true)
     public AnimeResponse updateAnimeById(Integer id, AnimeUpdateRequest request, MultipartFile file) {
         Anime anime = animeRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.ANIME_NOT_FOUND));
 
         animeMapper.updateAnime(anime, request);
-//        updateIfPresent(request.getTitle(), anime::setTitle);
-//        updateIfPresent(request.getDescription(), anime::setDescription);
-//        updateIfPresent(request.getYear(), anime::setYear);
-//        updateIfPresent(request.getGenre(), anime::setGenre);
 
         if (file != null && !file.isEmpty()) {
-            String fileName = cloudinaryService.uploadImage(file);
-            if (fileName != null) {
-                anime.setPosterUrl(fileName);
-            }
+            anime.setPosterUrl(fileStorageService.storeImageFile(file));
         }
 
         return animeMapper.toAnimeResponse(animeRepository.save(anime));
     }
 
+    @CacheEvict(value = {"animeById", "animeSearch"}, allEntries = true)
     public String deleteAnimeById(Integer id) {
+        if (!animeRepository.existsById(id)) {
+            throw new AppException(ErrorCode.ANIME_NOT_FOUND);
+        }
         animeRepository.deleteById(id);
         return "Successfully deleted anime by Anime Id: " + id;
     }

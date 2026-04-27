@@ -9,6 +9,7 @@ import com.backend.animeplay.enums.VideoEnum;
 import com.backend.animeplay.exception.AppException;
 import com.backend.animeplay.exception.ErrorCode;
 import com.backend.animeplay.mapper.EpisodeMapper;
+import com.backend.animeplay.repository.AnimeRepository;
 import com.backend.animeplay.repository.EpisodeRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -25,12 +26,16 @@ import java.util.stream.Collectors;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class EpisodeService {
     EpisodeRepository episodeRepository;
+    AnimeRepository animeRepository;
     EpisodeMapper episodeMapper;
     FileStorageService fileStorageService;
 
     @Transactional
     public EpisodeResponse createEpisode(EpisodeCreateRequest request, MultipartFile file) {
         Episode episode = episodeMapper.toEpisode(request);
+        Anime anime = animeRepository.findById(request.getAnimeId())
+                .orElseThrow(() -> new AppException(ErrorCode.ANIME_NOT_FOUND));
+        episode.setAnime(anime);
 
         if (request.getVideoType() == VideoEnum.LOCAL) {
             if (file != null && !file.isEmpty()) {
@@ -52,12 +57,12 @@ public class EpisodeService {
         Episode episode = episodeRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.EPISODE_NOT_FOUND));
 
-        Anime anime = episode.getAnime();
-
         if (request.getEpisodeNumber() != null) {
             episode.setEpisodeNumber(request.getEpisodeNumber());
         }
         if (request.getAnimeId() != null) {
+            Anime anime = animeRepository.findById(request.getAnimeId())
+                    .orElseThrow(() -> new AppException(ErrorCode.ANIME_NOT_FOUND));
             episode.setAnime(anime);
         }
 
@@ -86,6 +91,9 @@ public class EpisodeService {
     }
 
     public String deleteEpisodeById(Integer id) {
+        if (!episodeRepository.existsById(id)) {
+            throw new AppException(ErrorCode.EPISODE_NOT_FOUND);
+        }
         episodeRepository.deleteById(id);
         return "Successfully deleted episode by: " + id;
     }

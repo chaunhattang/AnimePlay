@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -43,11 +44,29 @@ public class UserController {
                 .build();
     }
 
+    @GetMapping("/me")
+    public ApiResponse<UserResponse> getCurrentUser() {
+        return ApiResponse.<UserResponse>builder()
+                .result(userService.getCurrentUser())
+                .message("Current User Got Successfully")
+                .build();
+    }
+
+    @PutMapping(value = "/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<UserResponse> updateCurrentUser(
+            @ModelAttribute @Valid UserUpdateRequest request,
+            @RequestParam(value = "file", required = false) MultipartFile file) {
+        return ApiResponse.<UserResponse>builder()
+                .result(userService.updateCurrentUser(request, file))
+                .message("Current User Updated Successfully")
+                .build();
+    }
+
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ADMIN') or #id == authentication.name")
     public ApiResponse<UserResponse> updateUserByUsername(
             @PathVariable("id") String id,
-            @ModelAttribute UserUpdateRequest request,
+            @ModelAttribute @Valid UserUpdateRequest request,
             @RequestParam(value = "file", required = false) MultipartFile file) {
         return ApiResponse.<UserResponse>builder()
                 .result(userService.updateUserById(id, request, file))

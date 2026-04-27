@@ -11,7 +11,7 @@ import lombok.experimental.FieldDefaults;
 @Getter
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ForgotPasswordRequest {
-    @NotBlank(message = "Email is not blank")
-    @Email(message = "Email is invalid")
+    @NotBlank(message = "EMAIL_INVALID")
+    @Email(message = "EMAIL_INVALID")
     String email;
 }

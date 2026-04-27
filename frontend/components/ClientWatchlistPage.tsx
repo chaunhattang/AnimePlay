@@ -24,7 +24,7 @@ export default function ClientWatchlistPage() {
     <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-bold">My Watchlist</h1>
-        <p className="text-sm text-gray-400">Movies saved by {currentUser.fullName}.</p>
+        <p className="text-sm text-gray-400">Movies saved by {currentUser.fullName || currentUser.username}.</p>
       </div>
       <MovieGrid movies={savedMovies} />
     </div>

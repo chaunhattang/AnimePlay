@@ -25,7 +25,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.Date;
 
@@ -43,15 +42,16 @@ public class AuthenticationService {
 
     @NonFinal
     @Value("${jwt.valid-duration}")
-    private long VALID_DURATION;
+    private long VALID_DURATION_SECONDS;
 
     @NonFinal
     @Value("${google.client-id}")
     private String GOOGLE_CLIENT_ID;
 
     private User getUser(AuthenticationRequest request) {
-        return userRepository.findByUsername(request.getAccountName())
-                .orElseGet(() -> userRepository.findByEmail(request.getAccountName())
+        String accountName = request.getAccountName().trim();
+        return userRepository.findByUsername(accountName)
+                .orElseGet(() -> userRepository.findByEmail(accountName.toLowerCase())
                         .orElse(null));
     }
 
@@ -134,7 +134,7 @@ public class AuthenticationService {
                 .subject(user.getId())
                 .issuer("anime-play")
                 .issueTime(new Date())
-                .expirationTime(new Date(Instant.now().plus(VALID_DURATION, ChronoUnit.HOURS).toEpochMilli()))
+                .expirationTime(new Date(Instant.now().plusSeconds(VALID_DURATION_SECONDS).toEpochMilli()))
                 .claim("role", user.getRole().name())
                 .build();
 

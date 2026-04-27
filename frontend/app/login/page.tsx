@@ -7,10 +7,11 @@ import { useAppContext } from "@/components/AppProvider";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { currentUser, login, loginWithGoogle } = useAppContext();
-  const [username, setUsername] = useState("");
+  const { currentUser, login } = useAppContext();
+  const [accountName, setAccountName] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -18,18 +19,18 @@ export default function LoginPage() {
     }
   }, [currentUser, router]);
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const result = login({ username, password });
+    setSubmitting(true);
+    setError("");
+
+    const result = await login({ accountName, password });
     if (!result.ok) {
       setError(result.error || "Login failed.");
+      setSubmitting(false);
       return;
     }
-    router.push("/");
-  };
 
-  const onGoogleLogin = () => {
-    loginWithGoogle();
     router.push("/");
   };
 
@@ -37,14 +38,14 @@ export default function LoginPage() {
     <div className="mx-auto w-full max-w-md space-y-5 rounded-lg border border-white/10 bg-white/5 p-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-bold">Login</h1>
-        <p className="text-sm text-gray-400">Use your username/password or Google login.</p>
+        <p className="text-sm text-gray-400">Login with username or email and password.</p>
       </div>
 
       <form onSubmit={onSubmit} className="space-y-3">
         <input
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-          placeholder="Username"
+          value={accountName}
+          onChange={(event) => setAccountName(event.target.value)}
+          placeholder="Username or email"
           className="w-full rounded-md border border-white/15 bg-black px-3 py-2 text-sm"
           required
         />
@@ -56,18 +57,14 @@ export default function LoginPage() {
           className="w-full rounded-md border border-white/15 bg-black px-3 py-2 text-sm"
           required
         />
-        <button type="submit" className="w-full rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white">
-          Login
+        <button
+          type="submit"
+          disabled={submitting}
+          className="w-full rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-70"
+        >
+          {submitting ? "Logging in..." : "Login"}
         </button>
       </form>
-
-      <button
-        type="button"
-        onClick={onGoogleLogin}
-        className="w-full rounded-md border border-white/20 px-4 py-2 text-sm font-semibold hover:bg-white/10"
-      >
-        Login with Google
-      </button>
 
       {error ? <p className="text-sm text-red-300">{error}</p> : null}
 
@@ -77,7 +74,6 @@ export default function LoginPage() {
           Register now
         </Link>
       </p>
-      <p className="text-xs text-gray-500">Demo admin: admin / admin123</p>
     </div>
   );
 }

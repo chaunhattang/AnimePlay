@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -19,13 +20,18 @@ export default function RegisterPage() {
     }
   }, [currentUser, router]);
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const result = register({ username, email, password });
+    setSubmitting(true);
+    setError("");
+
+    const result = await register({ username, email, password });
     if (!result.ok) {
       setError(result.error || "Register failed.");
+      setSubmitting(false);
       return;
     }
+
     router.push("/");
   };
 
@@ -60,8 +66,12 @@ export default function RegisterPage() {
           className="w-full rounded-md border border-white/15 bg-black px-3 py-2 text-sm"
           required
         />
-        <button type="submit" className="w-full rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white">
-          Register
+        <button
+          type="submit"
+          disabled={submitting}
+          className="w-full rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-70"
+        >
+          {submitting ? "Registering..." : "Register"}
         </button>
       </form>
 

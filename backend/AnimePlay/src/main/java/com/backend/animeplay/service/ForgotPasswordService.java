@@ -35,6 +35,9 @@ public class ForgotPasswordService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
+        forgotPasswordRepository.findByUser_Id(user.getId())
+                .ifPresent(forgotPasswordRepository::delete);
+
         int otp = new Random().nextInt(900_000) + 100_000;
 
         ForgotPassword forgotPassword = ForgotPassword.builder()
@@ -54,7 +57,7 @@ public class ForgotPasswordService {
     }
 
     public String verifyOtp(VerifyOtpRequest request) {
-        User user = userRepository.findByUsername(request.getEmail())
+        User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         ForgotPassword forgotPassword = forgotPasswordRepository.findByOtpAndUser_Id(request.getOtp(), user.getId())

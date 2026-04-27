@@ -10,85 +10,44 @@ type MessageState = {
   text: string;
 } | null;
 
-function parseList(value: string) {
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
 function MovieRow({
   movie,
   onUpdate,
   onDelete
 }: {
   movie: Movie;
-  onUpdate: (movieId: string, event: FormEvent<HTMLFormElement>) => void;
-  onDelete: (movieId: string) => void;
+  onUpdate: (movieId: number, event: FormEvent<HTMLFormElement>) => Promise<void>;
+  onDelete: (movieId: number) => Promise<void>;
 }) {
   return (
     <details className="rounded-lg border border-white/10 bg-white/5 p-4">
       <summary className="cursor-pointer list-none text-sm font-semibold">
         {movie.title} ({movie.year}) | id: {movie.id}
       </summary>
-      <form onSubmit={(event) => onUpdate(movie.id, event)} className="mt-4 grid gap-2">
+      <form onSubmit={(event) => void onUpdate(movie.id, event)} className="mt-4 grid gap-2">
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           <input name="title" defaultValue={movie.title} className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
-          <input name="year" type="number" defaultValue={movie.year} className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
-          <input name="duration" defaultValue={movie.duration} className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
+          <input name="year" defaultValue={movie.year} className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
+          <input name="genre" defaultValue={movie.genre} className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
           <input
-            name="rating"
-            type="number"
-            min={0}
-            max={10}
-            step={0.1}
-            defaultValue={movie.rating}
-            className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm"
-            required
-          />
-          <input name="votes" defaultValue={movie.votes} className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
-          <select name="badge" defaultValue={movie.badge || ""} className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm">
-            <option value="">No Badge</option>
-            <option value="Now Playing">Now Playing</option>
-            <option value="Top Rated">Top Rated</option>
-            <option value="Trending">Trending</option>
-          </select>
-          <input name="language" defaultValue={movie.language} className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
-          <input name="country" defaultValue={movie.country} className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
-          <input name="director" defaultValue={movie.director} className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
-          <input
-            name="trailerYoutubeId"
-            defaultValue={movie.trailerYoutubeId}
+            name="trailerUrl"
+            defaultValue={movie.trailerUrl || ""}
             className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3"
-            required
           />
           <input
-            name="poster"
-            defaultValue={movie.poster}
+            name="posterUrl"
+            defaultValue={movie.posterUrl || ""}
             className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3"
-            required
           />
           <input
-            name="backdrop"
-            defaultValue={movie.backdrop}
+            name="posterFile"
+            type="file"
+            accept="image/*"
             className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3"
-            required
-          />
-          <input
-            name="genres"
-            defaultValue={movie.genres.join(", ")}
-            className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3"
-            required
-          />
-          <input
-            name="cast"
-            defaultValue={movie.cast.join(", ")}
-            className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3"
-            required
           />
           <textarea
-            name="storyline"
-            defaultValue={movie.storyline}
+            name="description"
+            defaultValue={movie.description}
             className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3"
             rows={4}
             required
@@ -100,7 +59,7 @@ function MovieRow({
           </button>
           <button
             type="button"
-            onClick={() => onDelete(movie.id)}
+            onClick={() => void onDelete(movie.id)}
             className="rounded-md border border-red-400/50 px-3 py-1.5 text-sm text-red-300"
           >
             Delete Movie
@@ -114,6 +73,7 @@ function MovieRow({
 export default function AdminMoviesPage() {
   const { currentUser, isAdmin, movies, createMovie, updateMovie, deleteMovie } = useAppContext();
   const [message, setMessage] = useState<MessageState>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   if (!currentUser) {
     return (
@@ -136,60 +96,42 @@ export default function AdminMoviesPage() {
     );
   }
 
-  const onCreateMovie = (event: FormEvent<HTMLFormElement>) => {
+  const onCreateMovie = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setSubmitting(true);
     const formData = new FormData(event.currentTarget);
-    const badgeValue = String(formData.get("badge") || "").trim();
-
-    const result = createMovie({
-      id: String(formData.get("id") || "").trim() || undefined,
+    const result = await createMovie({
       title: String(formData.get("title") || ""),
-      year: Number(formData.get("year") || 0),
-      duration: String(formData.get("duration") || ""),
-      rating: Number(formData.get("rating") || 0),
-      votes: String(formData.get("votes") || ""),
-      genres: parseList(String(formData.get("genres") || "")),
-      language: String(formData.get("language") || ""),
-      country: String(formData.get("country") || ""),
-      storyline: String(formData.get("storyline") || ""),
-      cast: parseList(String(formData.get("cast") || "")),
-      director: String(formData.get("director") || ""),
-      trailerYoutubeId: String(formData.get("trailerYoutubeId") || ""),
-      poster: String(formData.get("poster") || ""),
-      backdrop: String(formData.get("backdrop") || ""),
-      badge: badgeValue ? (badgeValue as "Now Playing" | "Top Rated" | "Trending") : undefined
+      year: String(formData.get("year") || ""),
+      genre: String(formData.get("genre") || ""),
+      description: String(formData.get("description") || ""),
+      trailerUrl: String(formData.get("trailerUrl") || ""),
+      posterUrl: String(formData.get("posterUrl") || ""),
+      posterFile: (formData.get("posterFile") as File) || null
     });
 
     if (!result.ok) {
       setMessage({ type: "error", text: result.error || "Cannot create movie." });
+      setSubmitting(false);
       return;
     }
 
     event.currentTarget.reset();
     setMessage({ type: "success", text: "Movie created." });
+    setSubmitting(false);
   };
 
-  const onUpdateMovie = (movieId: string, event: FormEvent<HTMLFormElement>) => {
+  const onUpdateMovie = async (movieId: number, event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const badgeValue = String(formData.get("badge") || "").trim();
-
-    const result = updateMovie(movieId, {
+    const result = await updateMovie(movieId, {
       title: String(formData.get("title") || ""),
-      year: Number(formData.get("year") || 0),
-      duration: String(formData.get("duration") || ""),
-      rating: Number(formData.get("rating") || 0),
-      votes: String(formData.get("votes") || ""),
-      genres: parseList(String(formData.get("genres") || "")),
-      language: String(formData.get("language") || ""),
-      country: String(formData.get("country") || ""),
-      storyline: String(formData.get("storyline") || ""),
-      cast: parseList(String(formData.get("cast") || "")),
-      director: String(formData.get("director") || ""),
-      trailerYoutubeId: String(formData.get("trailerYoutubeId") || ""),
-      poster: String(formData.get("poster") || ""),
-      backdrop: String(formData.get("backdrop") || ""),
-      badge: badgeValue ? (badgeValue as "Now Playing" | "Top Rated" | "Trending") : undefined
+      year: String(formData.get("year") || ""),
+      genre: String(formData.get("genre") || ""),
+      description: String(formData.get("description") || ""),
+      trailerUrl: String(formData.get("trailerUrl") || ""),
+      posterUrl: String(formData.get("posterUrl") || ""),
+      posterFile: (formData.get("posterFile") as File) || null
     });
 
     if (!result.ok) {
@@ -199,8 +141,8 @@ export default function AdminMoviesPage() {
     setMessage({ type: "success", text: "Movie updated." });
   };
 
-  const onDeleteMovie = (movieId: string) => {
-    const result = deleteMovie(movieId);
+  const onDeleteMovie = async (movieId: number) => {
+    const result = await deleteMovie(movieId);
     if (!result.ok) {
       setMessage({ type: "error", text: result.error || "Cannot delete movie." });
       return;
@@ -212,36 +154,22 @@ export default function AdminMoviesPage() {
     <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-bold">Admin - Movie Management</h1>
-        <p className="text-sm text-gray-400">Create, update and delete full movie data.</p>
+        <p className="text-sm text-gray-400">Create, update and delete anime from backend API.</p>
       </div>
 
-      <form onSubmit={onCreateMovie} className="grid gap-2 rounded-lg border border-white/10 bg-white/5 p-4">
+      <form onSubmit={(event) => void onCreateMovie(event)} className="grid gap-2 rounded-lg border border-white/10 bg-white/5 p-4">
         <h2 className="text-lg font-semibold">Create Movie</h2>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          <input name="id" placeholder="Movie id (optional, auto-generated)" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3" />
           <input name="title" placeholder="Title" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
-          <input name="year" type="number" placeholder="Year" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
-          <input name="duration" placeholder="Duration (e.g. 2h 10m)" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
-          <input name="rating" type="number" min={0} max={10} step={0.1} placeholder="Rating" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
-          <input name="votes" placeholder="Votes (e.g. 200K)" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
-          <select name="badge" defaultValue="" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm">
-            <option value="">No Badge</option>
-            <option value="Now Playing">Now Playing</option>
-            <option value="Top Rated">Top Rated</option>
-            <option value="Trending">Trending</option>
-          </select>
-          <input name="language" placeholder="Language" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
-          <input name="country" placeholder="Country" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
-          <input name="director" placeholder="Director" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
-          <input name="trailerYoutubeId" placeholder="YouTube trailer id" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3" required />
-          <input name="poster" placeholder="Poster URL" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3" required />
-          <input name="backdrop" placeholder="Backdrop URL" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3" required />
-          <input name="genres" placeholder="Genres comma-separated" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3" required />
-          <input name="cast" placeholder="Cast comma-separated" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3" required />
-          <textarea name="storyline" placeholder="Storyline" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3" rows={4} required />
+          <input name="year" placeholder="Year" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
+          <input name="genre" placeholder="Genre (comma separated)" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm" required />
+          <input name="trailerUrl" placeholder="Trailer URL" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3" />
+          <input name="posterUrl" placeholder="Poster URL" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3" />
+          <input name="posterFile" type="file" accept="image/*" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3" />
+          <textarea name="description" placeholder="Description" className="rounded-md border border-white/15 bg-black px-3 py-2 text-sm lg:col-span-3" rows={4} required />
         </div>
-        <button type="submit" className="w-fit rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold">
-          Add Movie
+        <button type="submit" disabled={submitting} className="w-fit rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold disabled:opacity-70">
+          {submitting ? "Adding..." : "Add Movie"}
         </button>
       </form>
 

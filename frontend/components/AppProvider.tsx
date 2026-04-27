@@ -1,11 +1,11 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { movies as seedMovies } from "@/data/movies";
-import { Movie, MovieReview, User, UserRole } from "@/lib/types";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { apiClient, ApiError } from "@/lib/api-client";
+import { Favorite, Movie, User, UserRole } from "@/lib/types";
 
 type AuthLoginInput = {
-  username: string;
+  accountName: string;
   password: string;
 };
 
@@ -19,7 +19,8 @@ type ProfileUpdateInput = {
   username: string;
   email: string;
   fullName: string;
-  avatar: string;
+  avatarUrl: string;
+  avatarFile?: File | null;
   oldPassword?: string;
   newPassword?: string;
   confirmNewPassword?: string;
@@ -30,15 +31,25 @@ type CreateUserInput = {
   email: string;
   password: string;
   fullName: string;
-  avatar: string;
+  avatarUrl?: string;
   role: UserRole;
 };
 
-type UpdateUserInput = Partial<CreateUserInput>;
+type UpdateUserInput = Partial<CreateUserInput> & {
+  avatarFile?: File | null;
+};
 
-type CreateMovieInput = Omit<Movie, "id"> & { id?: string };
+type CreateMovieInput = {
+  title: string;
+  description: string;
+  year: string;
+  genre: string;
+  trailerUrl?: string;
+  posterUrl?: string;
+  posterFile?: File | null;
+};
 
-type UpdateMovieInput = Partial<Omit<Movie, "id">>;
+type UpdateMovieInput = Partial<CreateMovieInput>;
 
 type ActionResult = {
   ok: boolean;
@@ -49,622 +60,353 @@ type AppContextValue = {
   loading: boolean;
   users: User[];
   movies: Movie[];
-  reviews: MovieReview[];
+  favorites: Favorite[];
   currentUser: User | null;
   isAdmin: boolean;
-  register: (input: AuthRegisterInput) => ActionResult;
-  login: (input: AuthLoginInput) => ActionResult;
-  loginWithGoogle: () => void;
+  register: (input: AuthRegisterInput) => Promise<ActionResult>;
+  login: (input: AuthLoginInput) => Promise<ActionResult>;
   logout: () => void;
-  updateProfile: (input: ProfileUpdateInput) => ActionResult;
-  toggleWatchlist: (movieId: string) => ActionResult;
-  isInWatchlist: (movieId: string) => boolean;
+  updateProfile: (input: ProfileUpdateInput) => Promise<ActionResult>;
+  toggleWatchlist: (movieId: number) => Promise<ActionResult>;
+  isInWatchlist: (movieId: number) => boolean;
   getWatchlistMovies: () => Movie[];
-  upsertReview: (movieId: string, rating: number, comment?: string) => ActionResult;
-  deleteReview: (reviewId: string) => ActionResult;
-  getMovieReviews: (movieId: string) => MovieReview[];
-  getMovieAverageRating: (movieId: string) => number;
-  getCurrentUserReview: (movieId: string) => MovieReview | null;
-  createUser: (input: CreateUserInput) => ActionResult;
-  updateUser: (userId: string, input: UpdateUserInput) => ActionResult;
-  deleteUser: (userId: string) => ActionResult;
-  createMovie: (input: CreateMovieInput) => ActionResult;
-  updateMovie: (movieId: string, input: UpdateMovieInput) => ActionResult;
-  deleteMovie: (movieId: string) => ActionResult;
+  createUser: (input: CreateUserInput) => Promise<ActionResult>;
+  updateUser: (userId: string, input: UpdateUserInput) => Promise<ActionResult>;
+  deleteUser: (userId: string) => Promise<ActionResult>;
+  createMovie: (input: CreateMovieInput) => Promise<ActionResult>;
+  updateMovie: (movieId: number, input: UpdateMovieInput) => Promise<ActionResult>;
+  deleteMovie: (movieId: number) => Promise<ActionResult>;
 };
 
-const APP_STORE_KEY = "animeplay-app-store-v1";
-
-const defaultUsers: User[] = [
-  {
-    id: "admin-1",
-    username: "admin",
-    email: "admin@animeplay.local",
-    password: "admin123",
-    fullName: "System Admin",
-    avatar: "https://api.dicebear.com/9.x/initials/svg?seed=Admin",
-    role: "admin",
-    watchlistIds: [],
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: "user-1",
-    username: "demo",
-    email: "demo@animeplay.local",
-    password: "demo123",
-    fullName: "Demo User",
-    avatar: "https://api.dicebear.com/9.x/initials/svg?seed=Demo",
-    role: "user",
-    watchlistIds: [],
-    createdAt: new Date().toISOString()
-  }
-];
-
-type PersistedStore = {
-  users: User[];
-  movies: Movie[];
-  reviews: MovieReview[];
-  currentUserId: string | null;
-};
-
-function createDefaultStore(): PersistedStore {
-  return {
-    users: defaultUsers,
-    movies: seedMovies,
-    reviews: [],
-    currentUserId: null
-  };
-}
-
+const TOKEN_KEY = "animeplay-access-token";
 const AppContext = createContext<AppContextValue | null>(null);
 
-function makeId(prefix: string) {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError) {
+    return error.message;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return fallback;
 }
 
-function createMovieId(title: string) {
-  const slug = title
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
-  return slug || makeId("movie");
-}
-
-function normalizeListValue(value: string): string[] {
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
+function appendIfPresent(formData: FormData, key: string, value?: string | null) {
+  if (value && value.trim()) {
+    formData.append(key, value.trim());
+  }
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [movies, setMovies] = useState<Movie[]>([]);
-  const [reviews, setReviews] = useState<MovieReview[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [favorites, setFavorites] = useState<Favorite[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
+  const isAdmin = currentUser?.role === "ADMIN";
 
-    try {
-      const raw = localStorage.getItem(APP_STORE_KEY);
-      if (!raw) {
-        const initialStore = createDefaultStore();
-        setUsers(initialStore.users);
-        setMovies(initialStore.movies);
-        setReviews(initialStore.reviews);
-        setCurrentUserId(initialStore.currentUserId);
-        localStorage.setItem(APP_STORE_KEY, JSON.stringify(initialStore));
-      } else {
-        const parsed = JSON.parse(raw) as PersistedStore;
-        setUsers(Array.isArray(parsed.users) ? parsed.users : defaultUsers);
-        setMovies(Array.isArray(parsed.movies) ? parsed.movies : seedMovies);
-        setReviews(Array.isArray(parsed.reviews) ? parsed.reviews : []);
-        setCurrentUserId(parsed.currentUserId || null);
-      }
-    } catch {
-      const fallbackStore = createDefaultStore();
-      setUsers(fallbackStore.users);
-      setMovies(fallbackStore.movies);
-      setReviews(fallbackStore.reviews);
-      setCurrentUserId(fallbackStore.currentUserId);
-    } finally {
-      setLoading(false);
+  const clearSession = useCallback(() => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(TOKEN_KEY);
     }
+    setToken(null);
+    setCurrentUser(null);
+    setFavorites([]);
+    setUsers([]);
   }, []);
 
-  useEffect(() => {
-    if (loading || typeof window === "undefined") {
-      return;
-    }
+  const loadMovies = useCallback(async () => {
+    const page = await apiClient.getAnime({
+      page: 0,
+      size: 100,
+      sortBy: "id",
+      sortDir: "desc"
+    });
+    setMovies(page.content || []);
+  }, []);
 
-    const persisted: PersistedStore = {
-      users,
-      movies,
-      reviews,
-      currentUserId
-    };
+  const loadAdminUsers = useCallback(async (accessToken: string) => {
+    const page = await apiClient.getUsers(accessToken, 0, 100);
+    setUsers(page.content || []);
+  }, []);
 
-    localStorage.setItem(APP_STORE_KEY, JSON.stringify(persisted));
-  }, [loading, users, movies, reviews, currentUserId]);
+  const loadAuthenticatedData = useCallback(
+    async (accessToken: string) => {
+      const me = await apiClient.getCurrentUser(accessToken);
+      setCurrentUser(me);
 
-  const currentUser = useMemo(
-    () => users.find((user) => user.id === currentUserId) || null,
-    [users, currentUserId]
+      const myFavorites = await apiClient.getFavorites(accessToken);
+      setFavorites(myFavorites || []);
+
+      if (me.role === "ADMIN") {
+        await loadAdminUsers(accessToken);
+      } else {
+        setUsers([]);
+      }
+    },
+    [loadAdminUsers]
   );
 
-  const isAdmin = currentUser?.role === "admin";
+  useEffect(() => {
+    let mounted = true;
 
-  const register = (input: AuthRegisterInput): ActionResult => {
-    const username = input.username.trim();
-    const email = input.email.trim().toLowerCase();
-    const password = input.password.trim();
+    const initialize = async () => {
+      try {
+        const savedToken = typeof window !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null;
+        await loadMovies();
 
-    if (!username || !email || !password) {
-      return { ok: false, error: "Please fill all required fields." };
-    }
-
-    if (users.some((user) => user.username.toLowerCase() === username.toLowerCase())) {
-      return { ok: false, error: "Username already exists." };
-    }
-
-    if (users.some((user) => user.email.toLowerCase() === email)) {
-      return { ok: false, error: "Email already exists." };
-    }
-
-    const newUser: User = {
-      id: makeId("user"),
-      username,
-      email,
-      password,
-      fullName: username,
-      avatar: `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(username)}`,
-      role: "user",
-      watchlistIds: [],
-      createdAt: new Date().toISOString()
+        if (savedToken) {
+          setToken(savedToken);
+          await loadAuthenticatedData(savedToken);
+        }
+      } catch {
+        clearSession();
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
     };
 
-    setUsers((prev) => [...prev, newUser]);
-    setCurrentUserId(newUser.id);
-    return { ok: true };
-  };
+    void initialize();
 
-  const login = (input: AuthLoginInput): ActionResult => {
-    const username = input.username.trim();
-    const password = input.password.trim();
-    const found = users.find(
-      (user) => user.username.toLowerCase() === username.toLowerCase() && user.password === password
-    );
-
-    if (!found) {
-      return { ok: false, error: "Invalid username or password." };
-    }
-
-    setCurrentUserId(found.id);
-    return { ok: true };
-  };
-
-  const loginWithGoogle = () => {
-    const googleEmail = "google.user@animeplay.local";
-    const existing = users.find((user) => user.email.toLowerCase() === googleEmail);
-
-    if (existing) {
-      setCurrentUserId(existing.id);
-      return;
-    }
-
-    const googleUser: User = {
-      id: makeId("user"),
-      username: `google_${Math.random().toString(36).slice(2, 7)}`,
-      email: googleEmail,
-      password: makeId("google-pass"),
-      fullName: "Google User",
-      avatar: "https://api.dicebear.com/9.x/initials/svg?seed=Google",
-      role: "user",
-      watchlistIds: [],
-      createdAt: new Date().toISOString()
+    return () => {
+      mounted = false;
     };
-    setUsers((prev) => [...prev, googleUser]);
-    setCurrentUserId(googleUser.id);
+  }, [clearSession, loadAuthenticatedData, loadMovies]);
+
+  const register = async (input: AuthRegisterInput): Promise<ActionResult> => {
+    try {
+      await apiClient.register(input);
+      return login({ accountName: input.username, password: input.password });
+    } catch (error) {
+      return { ok: false, error: getErrorMessage(error, "Register failed.") };
+    }
+  };
+
+  const login = async (input: AuthLoginInput): Promise<ActionResult> => {
+    try {
+      const response = await apiClient.login(input);
+      setToken(response.token);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(TOKEN_KEY, response.token);
+      }
+      await loadAuthenticatedData(response.token);
+      return { ok: true };
+    } catch (error) {
+      clearSession();
+      return { ok: false, error: getErrorMessage(error, "Login failed.") };
+    }
   };
 
   const logout = () => {
-    setCurrentUserId(null);
+    clearSession();
   };
 
-  const updateProfile = (input: ProfileUpdateInput): ActionResult => {
-    if (!currentUser) {
+  const updateProfile = async (input: ProfileUpdateInput): Promise<ActionResult> => {
+    if (!token || !currentUser) {
       return { ok: false, error: "You need to login first." };
     }
-
-    const username = input.username.trim();
-    const email = input.email.trim().toLowerCase();
-    const fullName = input.fullName.trim();
-    const avatar = input.avatar.trim();
-
-    if (!username || !email || !fullName) {
-      return { ok: false, error: "Username, email and fullname are required." };
+    if ((input.newPassword || input.confirmNewPassword) && input.newPassword !== input.confirmNewPassword) {
+      return { ok: false, error: "New password and confirm password do not match." };
     }
 
-    const usernameConflict = users.some(
-      (user) => user.id !== currentUser.id && user.username.toLowerCase() === username.toLowerCase()
-    );
-    if (usernameConflict) {
-      return { ok: false, error: "Username is already used by another account." };
+    try {
+      const formData = new FormData();
+      appendIfPresent(formData, "username", input.username);
+      appendIfPresent(formData, "email", input.email);
+      appendIfPresent(formData, "fullName", input.fullName);
+      appendIfPresent(formData, "avatarUrl", input.avatarUrl);
+      appendIfPresent(formData, "oldPassword", input.oldPassword);
+      appendIfPresent(formData, "newPassword", input.newPassword);
+      if (input.avatarFile) {
+        formData.append("file", input.avatarFile);
+      }
+
+      const updated = await apiClient.updateCurrentUser(token, formData);
+      setCurrentUser(updated);
+      setUsers((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: getErrorMessage(error, "Cannot update profile.") };
     }
-
-    const emailConflict = users.some((user) => user.id !== currentUser.id && user.email.toLowerCase() === email);
-    if (emailConflict) {
-      return { ok: false, error: "Email is already used by another account." };
-    }
-
-    const wantsPasswordChange = Boolean(input.newPassword?.trim() || input.confirmNewPassword?.trim());
-
-    if (wantsPasswordChange) {
-      if (!input.oldPassword?.trim()) {
-        return { ok: false, error: "Old password is required to set a new password." };
-      }
-      if (input.oldPassword !== currentUser.password) {
-        return { ok: false, error: "Old password is incorrect." };
-      }
-      if (!input.newPassword?.trim()) {
-        return { ok: false, error: "New password cannot be empty." };
-      }
-      if (input.newPassword !== input.confirmNewPassword) {
-        return { ok: false, error: "New password and confirm password do not match." };
-      }
-    }
-
-    setUsers((prev) =>
-      prev.map((user) =>
-        user.id === currentUser.id
-          ? {
-              ...user,
-              username,
-              email,
-              fullName,
-              avatar: avatar || user.avatar,
-              password: wantsPasswordChange ? (input.newPassword as string) : user.password
-            }
-          : user
-      )
-    );
-
-    return { ok: true };
   };
 
-  const toggleWatchlist = (movieId: string): ActionResult => {
-    if (!currentUser) {
+  const toggleWatchlist = async (movieId: number): Promise<ActionResult> => {
+    if (!token) {
       return { ok: false, error: "Login required." };
     }
-
-    setUsers((prev) =>
-      prev.map((user) => {
-        if (user.id !== currentUser.id) {
-          return user;
-        }
-        const alreadyInList = user.watchlistIds.includes(movieId);
-        return {
-          ...user,
-          watchlistIds: alreadyInList
-            ? user.watchlistIds.filter((id) => id !== movieId)
-            : [...user.watchlistIds, movieId]
-        };
-      })
-    );
-
-    return { ok: true };
+    try {
+      const exists = favorites.some((favorite) => favorite.anime.id === movieId);
+      if (exists) {
+        await apiClient.removeFavorite(token, movieId);
+        setFavorites((prev) => prev.filter((favorite) => favorite.anime.id !== movieId));
+      } else {
+        const created = await apiClient.addFavorite(token, movieId);
+        setFavorites((prev) => [created, ...prev]);
+      }
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: getErrorMessage(error, "Cannot update watchlist.") };
+    }
   };
 
-  const isInWatchlist = (movieId: string) => {
-    if (!currentUser) {
-      return false;
-    }
-    return currentUser.watchlistIds.includes(movieId);
-  };
+  const isInWatchlist = (movieId: number) => favorites.some((favorite) => favorite.anime.id === movieId);
 
-  const getWatchlistMovies = () => {
-    if (!currentUser) {
-      return [];
-    }
+  const getWatchlistMovies = () => favorites.map((favorite) => favorite.anime);
 
-    return movies.filter((movie) => currentUser.watchlistIds.includes(movie.id));
-  };
-
-  const upsertReview = (movieId: string, rating: number, comment?: string): ActionResult => {
-    if (!currentUser) {
-      return { ok: false, error: "Login required." };
-    }
-    if (rating < 1 || rating > 10) {
-      return { ok: false, error: "Rating must be between 1 and 10." };
-    }
-
-    const existing = reviews.find((review) => review.movieId === movieId && review.userId === currentUser.id);
-    if (existing) {
-      setReviews((prev) =>
-        prev.map((review) =>
-          review.id === existing.id
-            ? {
-                ...review,
-                rating,
-                comment: comment?.trim() || "",
-                createdAt: new Date().toISOString()
-              }
-            : review
-        )
-      );
-    } else {
-      setReviews((prev) => [
-        ...prev,
-        {
-          id: makeId("review"),
-          movieId,
-          userId: currentUser.id,
-          rating,
-          comment: comment?.trim() || "",
-          createdAt: new Date().toISOString()
-        }
-      ]);
-    }
-
-    return { ok: true };
-  };
-
-  const deleteReview = (reviewId: string): ActionResult => {
-    const review = reviews.find((item) => item.id === reviewId);
-    if (!review) {
-      return { ok: false, error: "Review not found." };
-    }
-
-    if (!currentUser || (currentUser.role !== "admin" && currentUser.id !== review.userId)) {
-      return { ok: false, error: "Permission denied." };
-    }
-
-    setReviews((prev) => prev.filter((item) => item.id !== reviewId));
-    return { ok: true };
-  };
-
-  const getMovieReviews = (movieId: string) =>
-    reviews
-      .filter((review) => review.movieId === movieId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-  const getMovieAverageRating = (movieId: string) => {
-    const movieReviews = reviews.filter((review) => review.movieId === movieId);
-    if (!movieReviews.length) {
-      const movie = movies.find((item) => item.id === movieId);
-      return movie?.rating || 0;
-    }
-    const total = movieReviews.reduce((sum, review) => sum + review.rating, 0);
-    return Number((total / movieReviews.length).toFixed(1));
-  };
-
-  const getCurrentUserReview = (movieId: string) => {
-    if (!currentUser) {
-      return null;
-    }
-    return reviews.find((review) => review.movieId === movieId && review.userId === currentUser.id) || null;
-  };
-
-  const createUser = (input: CreateUserInput): ActionResult => {
-    if (!isAdmin) {
+  const createUser = async (input: CreateUserInput): Promise<ActionResult> => {
+    if (!token || !isAdmin) {
       return { ok: false, error: "Admin permission required." };
     }
-
-    const username = input.username.trim();
-    const email = input.email.trim().toLowerCase();
-    const password = input.password.trim();
-    const fullName = input.fullName.trim();
-
-    if (!username || !email || !password || !fullName) {
-      return { ok: false, error: "All user fields are required." };
+    try {
+      const created = await apiClient.createUser(token, input);
+      setUsers((prev) => [created, ...prev]);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: getErrorMessage(error, "Cannot create user.") };
     }
-
-    if (users.some((user) => user.username.toLowerCase() === username.toLowerCase())) {
-      return { ok: false, error: "Username already exists." };
-    }
-    if (users.some((user) => user.email.toLowerCase() === email)) {
-      return { ok: false, error: "Email already exists." };
-    }
-
-    const newUser: User = {
-      id: makeId("user"),
-      username,
-      email,
-      password,
-      fullName,
-      avatar: input.avatar.trim() || `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(fullName)}`,
-      role: input.role,
-      watchlistIds: [],
-      createdAt: new Date().toISOString()
-    };
-
-    setUsers((prev) => [...prev, newUser]);
-    return { ok: true };
   };
 
-  const updateUser = (userId: string, input: UpdateUserInput): ActionResult => {
-    if (!isAdmin) {
+  const updateUser = async (userId: string, input: UpdateUserInput): Promise<ActionResult> => {
+    if (!token || !isAdmin) {
       return { ok: false, error: "Admin permission required." };
     }
+    try {
+      const formData = new FormData();
+      appendIfPresent(formData, "username", input.username);
+      appendIfPresent(formData, "email", input.email);
+      appendIfPresent(formData, "fullName", input.fullName);
+      appendIfPresent(formData, "avatarUrl", input.avatarUrl);
+      appendIfPresent(formData, "password", input.password);
+      appendIfPresent(formData, "role", input.role);
+      if (input.avatarFile) {
+        formData.append("file", input.avatarFile);
+      }
 
-    const target = users.find((user) => user.id === userId);
-    if (!target) {
-      return { ok: false, error: "User not found." };
+      const updated = await apiClient.updateUser(token, userId, formData);
+      setUsers((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      if (currentUser?.id === updated.id) {
+        setCurrentUser(updated);
+      }
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: getErrorMessage(error, "Cannot update user.") };
     }
-
-    const nextUsername = input.username?.trim() || target.username;
-    const nextEmail = input.email?.trim().toLowerCase() || target.email;
-
-    if (
-      users.some(
-        (user) => user.id !== userId && user.username.toLowerCase() === nextUsername.toLowerCase()
-      )
-    ) {
-      return { ok: false, error: "Username already exists." };
-    }
-
-    if (users.some((user) => user.id !== userId && user.email.toLowerCase() === nextEmail)) {
-      return { ok: false, error: "Email already exists." };
-    }
-
-    setUsers((prev) =>
-      prev.map((user) =>
-        user.id === userId
-          ? {
-              ...user,
-              username: nextUsername,
-              email: nextEmail,
-              password: input.password?.trim() || user.password,
-              fullName: input.fullName?.trim() || user.fullName,
-              avatar: input.avatar?.trim() || user.avatar,
-              role: input.role || user.role
-            }
-          : user
-      )
-    );
-
-    return { ok: true };
   };
 
-  const deleteUser = (userId: string): ActionResult => {
-    if (!isAdmin) {
+  const deleteUser = async (userId: string): Promise<ActionResult> => {
+    if (!token || !isAdmin) {
       return { ok: false, error: "Admin permission required." };
     }
     if (currentUser?.id === userId) {
       return { ok: false, error: "Admin cannot delete current account." };
     }
 
-    setUsers((prev) => prev.filter((user) => user.id !== userId));
-    setReviews((prev) => prev.filter((review) => review.userId !== userId));
-
-    return { ok: true };
+    try {
+      await apiClient.deleteUser(token, userId);
+      setUsers((prev) => prev.filter((item) => item.id !== userId));
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: getErrorMessage(error, "Cannot delete user.") };
+    }
   };
 
-  const createMovie = (input: CreateMovieInput): ActionResult => {
-    if (!isAdmin) {
+  const createMovie = async (input: CreateMovieInput): Promise<ActionResult> => {
+    if (!token || !isAdmin) {
       return { ok: false, error: "Admin permission required." };
     }
 
-    const title = input.title.trim();
-    if (!title) {
-      return { ok: false, error: "Movie title is required." };
+    try {
+      const formData = new FormData();
+      appendIfPresent(formData, "title", input.title);
+      appendIfPresent(formData, "description", input.description);
+      appendIfPresent(formData, "year", input.year);
+      appendIfPresent(formData, "genre", input.genre);
+      appendIfPresent(formData, "trailerUrl", input.trailerUrl);
+      appendIfPresent(formData, "posterUrl", input.posterUrl);
+      if (input.posterFile) {
+        formData.append("file", input.posterFile);
+      }
+
+      const created = await apiClient.createAnime(token, formData);
+      setMovies((prev) => [created, ...prev]);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: getErrorMessage(error, "Cannot create movie.") };
     }
-
-    const movieId = (input.id?.trim() || createMovieId(title)).toLowerCase();
-    if (movies.some((movie) => movie.id === movieId)) {
-      return { ok: false, error: "Movie id already exists." };
-    }
-
-    const newMovie: Movie = {
-      id: movieId,
-      title,
-      year: Number(input.year),
-      duration: input.duration.trim(),
-      rating: Number(input.rating),
-      votes: input.votes.trim(),
-      genres: normalizeListValue(input.genres.join(",")),
-      language: input.language.trim(),
-      country: input.country.trim(),
-      storyline: input.storyline.trim(),
-      cast: normalizeListValue(input.cast.join(",")),
-      director: input.director.trim(),
-      trailerYoutubeId: input.trailerYoutubeId.trim(),
-      poster: input.poster.trim(),
-      backdrop: input.backdrop.trim(),
-      badge: input.badge
-    };
-
-    setMovies((prev) => [newMovie, ...prev]);
-    return { ok: true };
   };
 
-  const updateMovie = (movieId: string, input: UpdateMovieInput): ActionResult => {
-    if (!isAdmin) {
+  const updateMovie = async (movieId: number, input: UpdateMovieInput): Promise<ActionResult> => {
+    if (!token || !isAdmin) {
+      return { ok: false, error: "Admin permission required." };
+    }
+    try {
+      const formData = new FormData();
+      appendIfPresent(formData, "title", input.title);
+      appendIfPresent(formData, "description", input.description);
+      appendIfPresent(formData, "year", input.year);
+      appendIfPresent(formData, "genre", input.genre);
+      appendIfPresent(formData, "trailerUrl", input.trailerUrl);
+      appendIfPresent(formData, "posterUrl", input.posterUrl);
+      if (input.posterFile) {
+        formData.append("file", input.posterFile);
+      }
+
+      const updated = await apiClient.updateAnime(token, movieId, formData);
+      setMovies((prev) => prev.map((item) => (item.id === movieId ? updated : item)));
+      setFavorites((prev) =>
+        prev.map((favorite) =>
+          favorite.anime.id === movieId ? { ...favorite, anime: updated } : favorite
+        )
+      );
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: getErrorMessage(error, "Cannot update movie.") };
+    }
+  };
+
+  const deleteMovie = async (movieId: number): Promise<ActionResult> => {
+    if (!token || !isAdmin) {
       return { ok: false, error: "Admin permission required." };
     }
 
-    const target = movies.find((movie) => movie.id === movieId);
-    if (!target) {
-      return { ok: false, error: "Movie not found." };
+    try {
+      await apiClient.deleteAnime(token, movieId);
+      setMovies((prev) => prev.filter((item) => item.id !== movieId));
+      setFavorites((prev) => prev.filter((favorite) => favorite.anime.id !== movieId));
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: getErrorMessage(error, "Cannot delete movie.") };
     }
-
-    setMovies((prev) =>
-      prev.map((movie) =>
-        movie.id === movieId
-          ? {
-              ...movie,
-              title: input.title?.trim() || movie.title,
-              year: input.year === undefined ? movie.year : Number(input.year),
-              duration: input.duration?.trim() || movie.duration,
-              rating: input.rating === undefined ? movie.rating : Number(input.rating),
-              votes: input.votes?.trim() || movie.votes,
-              genres: input.genres ? normalizeListValue(input.genres.join(",")) : movie.genres,
-              language: input.language?.trim() || movie.language,
-              country: input.country?.trim() || movie.country,
-              storyline: input.storyline?.trim() || movie.storyline,
-              cast: input.cast ? normalizeListValue(input.cast.join(",")) : movie.cast,
-              director: input.director?.trim() || movie.director,
-              trailerYoutubeId: input.trailerYoutubeId?.trim() || movie.trailerYoutubeId,
-              poster: input.poster?.trim() || movie.poster,
-              backdrop: input.backdrop?.trim() || movie.backdrop,
-              badge: input.badge === undefined ? movie.badge : input.badge
-            }
-          : movie
-      )
-    );
-    return { ok: true };
   };
 
-  const deleteMovie = (movieId: string): ActionResult => {
-    if (!isAdmin) {
-      return { ok: false, error: "Admin permission required." };
-    }
-
-    setMovies((prev) => prev.filter((movie) => movie.id !== movieId));
-    setReviews((prev) => prev.filter((review) => review.movieId !== movieId));
-    setUsers((prev) =>
-      prev.map((user) => ({
-        ...user,
-        watchlistIds: user.watchlistIds.filter((id) => id !== movieId)
-      }))
-    );
-
-    return { ok: true };
-  };
-
-  const value: AppContextValue = {
-    loading,
-    users,
-    movies,
-    reviews,
-    currentUser,
-    isAdmin,
-    register,
-    login,
-    loginWithGoogle,
-    logout,
-    updateProfile,
-    toggleWatchlist,
-    isInWatchlist,
-    getWatchlistMovies,
-    upsertReview,
-    deleteReview,
-    getMovieReviews,
-    getMovieAverageRating,
-    getCurrentUserReview,
-    createUser,
-    updateUser,
-    deleteUser,
-    createMovie,
-    updateMovie,
-    deleteMovie
-  };
+  const value = useMemo<AppContextValue>(
+    () => ({
+      loading,
+      users,
+      movies,
+      favorites,
+      currentUser,
+      isAdmin,
+      register,
+      login,
+      logout,
+      updateProfile,
+      toggleWatchlist,
+      isInWatchlist,
+      getWatchlistMovies,
+      createUser,
+      updateUser,
+      deleteUser,
+      createMovie,
+      updateMovie,
+      deleteMovie
+    }),
+    [loading, users, movies, favorites, currentUser, isAdmin]
+  );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

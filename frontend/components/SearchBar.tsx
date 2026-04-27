@@ -27,7 +27,7 @@ export default function SearchBar() {
         type="text"
         defaultValue={searchParams.get("q") || ""}
         onChange={(event) => onChange(event.target.value)}
-        placeholder="Search movies or cast..."
+        placeholder="Search anime title or description..."
         className="w-full rounded-md border border-white/15 bg-white/5 py-2 pl-9 pr-3 text-sm text-white placeholder:text-gray-500 focus:border-brand-500 focus:outline-none"
       />
     </label>
