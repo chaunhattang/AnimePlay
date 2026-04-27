@@ -38,7 +38,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers,
-    cache: "no-store"
+    cache: "no-store",
   });
 
   const data = (await response.json().catch(() => null)) as ApiEnvelope<T> | null;
@@ -51,7 +51,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     return data.result;
   }
 
-  return (data as unknown) as T;
+  return data as unknown as T;
 }
 
 export function decodeJwt(token: string): { sub?: string; role?: string } | null {
@@ -112,21 +112,21 @@ export const apiClient = {
   register(payload: RegisterRequest) {
     return request<User>("/auth/register", {
       method: "POST",
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
   },
 
   login(payload: LoginRequest) {
     return request<{ token: string }>("/auth/login", {
       method: "POST",
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
   },
 
   getCurrentUser(token: string) {
     return request<User>("/users/me", {
       method: "GET",
-      token
+      token,
     });
   },
 
@@ -134,14 +134,14 @@ export const apiClient = {
     return request<User>("/users/me", {
       method: "PUT",
       body: formData,
-      token
+      token,
     });
   },
 
   getUsers(token: string, page = 0, size = 100) {
     return request<PageResult<User>>(`/users/all?page=${page}&size=${size}`, {
       method: "GET",
-      token
+      token,
     });
   },
 
@@ -149,7 +149,7 @@ export const apiClient = {
     return request<User>("/auth/create", {
       method: "POST",
       body: JSON.stringify(payload),
-      token
+      token,
     });
   },
 
@@ -157,27 +157,27 @@ export const apiClient = {
     return request<User>(`/users/${userId}`, {
       method: "PUT",
       body: formData,
-      token
+      token,
     });
   },
 
   deleteUser(token: string, userId: string) {
     return request<string>(`/users/${userId}`, {
       method: "DELETE",
-      token
+      token,
     });
   },
 
   getAnime(query: AnimeQuery = {}) {
     const queryString = toQueryString(query);
     return request<PageResult<Movie>>(`/anime${queryString ? `?${queryString}` : ""}`, {
-      method: "GET"
+      method: "GET",
     });
   },
 
   getAnimeById(id: number) {
     return request<Movie>(`/anime/${id}`, {
-      method: "GET"
+      method: "GET",
     });
   },
 
@@ -185,7 +185,7 @@ export const apiClient = {
     return request<Movie>("/anime", {
       method: "POST",
       body: formData,
-      token
+      token,
     });
   },
 
@@ -193,21 +193,21 @@ export const apiClient = {
     return request<Movie>(`/anime/${animeId}`, {
       method: "PUT",
       body: formData,
-      token
+      token,
     });
   },
 
   deleteAnime(token: string, animeId: number) {
     return request<string>(`/anime/${animeId}`, {
       method: "DELETE",
-      token
+      token,
     });
   },
 
   getFavorites(token: string) {
     return request<Favorite[]>("/favorites/all", {
       method: "GET",
-      token
+      token,
     });
   },
 
@@ -215,14 +215,21 @@ export const apiClient = {
     return request<Favorite>("/favorites", {
       method: "POST",
       body: JSON.stringify({ animeId }),
-      token
+      token,
     });
   },
 
   removeFavorite(token: string, animeId: number) {
     return request<string>(`/favorites/${animeId}`, {
       method: "DELETE",
-      token
+      token,
     });
-  }
+  },
 };
+export function getMediaUrl(path?: string | null): string {
+  if (!path) return "https://www.shutterstock.com/image-vector/default-avatar-profile-image-symbol-600nw-2703919459.jpg";
+  if (path.startsWith("http")) return path;
+
+  const safePath = path.startsWith("/") ? path : `/${path}`;
+  return `${API_BASE_URL}${safePath}`;
+}

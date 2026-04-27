@@ -16,8 +16,6 @@ type AuthRegisterInput = {
 };
 
 type ProfileUpdateInput = {
-  username: string;
-  email: string;
   fullName: string;
   avatarUrl: string;
   avatarFile?: File | null;
@@ -215,8 +213,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const formData = new FormData();
-      appendIfPresent(formData, "username", input.username);
-      appendIfPresent(formData, "email", input.email);
       appendIfPresent(formData, "fullName", input.fullName);
       appendIfPresent(formData, "avatarUrl", input.avatarUrl);
       appendIfPresent(formData, "oldPassword", input.oldPassword);
