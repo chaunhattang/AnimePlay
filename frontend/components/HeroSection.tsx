@@ -6,13 +6,14 @@ import { motion } from "framer-motion";
 import { PlayCircle, Sparkles } from "lucide-react";
 import { Movie } from "@/lib/types";
 import WatchlistButton from "@/components/WatchlistButton";
+import { getMediaUrl } from "@/lib/api-client";
 
 type HeroSectionProps = {
   movie: Movie;
 };
 
 export default function HeroSection({ movie }: HeroSectionProps) {
-  const posterUrl = movie.posterUrl || "https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg";
+  const posterUrl = movie.posterUrl ? getMediaUrl(movie.posterUrl) : "https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg";
 
   return (
     <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: "easeOut" }} className="animate-fade-in-up group relative overflow-hidden rounded-2xl border border-white/10 shadow-card">

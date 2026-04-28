@@ -278,7 +278,7 @@ export const apiClient = {
   },
 };
 export function getMediaUrl(path?: string | null): string {
-  if (!path) return "https://www.shutterstock.com/image-vector/default-avatar-profile-image-symbol-600nw-2703919459.jpg";
+  if (!path) return "https://api.dicebear.com/6.x/identicon/svg?seed=animeplay-default";
   if (path.startsWith("http")) return path;
 
   const safePath = path.startsWith("/") ? path : `/${path}`;

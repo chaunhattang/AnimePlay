@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Calendar, PlayCircle, Tags, ArrowLeft, Film } from "lucide-react";
 import MovieGrid from "@/components/MovieGrid";
 import WatchlistButton from "@/components/WatchlistButton";
@@ -36,7 +37,30 @@ export default function MovieDetailPage() {
   }
 
   const related = getRelatedMovies(movies, movie.id);
-  const posterUrl = movie.posterUrl || "https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg";
+  function getYouTubeId(url?: string | null) {
+    if (!url) return null;
+    try {
+      const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+      return m && m[1] ? m[1] : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function getYouTubeThumbnail(url?: string | null) {
+    const id = getYouTubeId(url);
+    if (!id) return null;
+    return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+  }
+
+  const posterUrl = movie.posterUrl ? getMediaUrl(movie.posterUrl) : getYouTubeThumbnail(movie.trailerUrl) || "https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg";
+
+  const [showTrailer, setShowTrailer] = useState(false);
+  const [mountedPortal, setMountedPortal] = useState(false);
+
+  useEffect(() => {
+    setMountedPortal(true);
+  }, []);
 
   const [episodes, setEpisodes] = useState<any[]>([]);
   const [loadingEpisodes, setLoadingEpisodes] = useState(false);
@@ -151,10 +175,10 @@ export default function MovieDetailPage() {
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
             {movie.trailerUrl ? (
-              <a href={movie.trailerUrl} target="_blank" rel="noreferrer" className="btn-lift inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-gray-100">
+              <button onClick={() => setShowTrailer(true)} className="btn-lift inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-gray-100">
                 <PlayCircle className="h-4 w-4" />
                 <span>Watch Trailer</span>
-              </a>
+              </button>
             ) : null}
             <WatchlistButton movieId={movie.id} />
           </div>
@@ -170,17 +194,17 @@ export default function MovieDetailPage() {
                 <div className="flex flex-wrap gap-3">
                   {episodes
                     .sort((a, b) => (a.episodeNumber || 0) - (b.episodeNumber || 0))
-                    .map((ep) => (
-                      <a
-                        key={ep.id}
-                        href={`/watch?videoUrl=${encodeURIComponent(ep.videoUrl || "")} &animeId=${movie.id}&episodeId=${ep.id}`.replace(" ", "")}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center justify-center rounded-lg border border-white/6 bg-white/[0.02] px-4 py-2 text-sm text-gray-300 hover:bg-white/5"
-                      >
-                        Episode {ep.episodeNumber}
-                      </a>
-                    ))}
+                    .map((ep) => {
+                      const params = new URLSearchParams();
+                      params.set("videoUrl", ep.videoUrl || "");
+                      params.set("animeId", String(movie.id));
+                      params.set("episodeId", String(ep.id));
+                      return (
+                        <Link key={ep.id} href={`/watch?${params.toString()}`} className="inline-flex items-center justify-center rounded-lg border border-white/6 bg-white/[0.02] px-4 py-2 text-sm text-gray-300 hover:bg-white/5">
+                          Episode {ep.episodeNumber}
+                        </Link>
+                      );
+                    })}
                 </div>
               </div>
             )}
@@ -256,6 +280,30 @@ export default function MovieDetailPage() {
           <MovieGrid movies={related} />
         </section>
       )}
+      {mountedPortal && showTrailer
+        ? createPortal(
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+              <div className="w-full max-w-4xl">
+                <div className="aspect-video rounded-lg overflow-hidden bg-black">
+                  {getYouTubeEmbedUrl(movie.trailerUrl) ? (
+                    <iframe className="w-full h-full" src={getYouTubeEmbedUrl(movie.trailerUrl) || ""} title={`Trailer ${movie.title}`} frameBorder={0} allowFullScreen />
+                  ) : (
+                    <video controls className="w-full h-full">
+                      <source src={movie.trailerUrl && !movie.trailerUrl.startsWith("http") ? getMediaUrl(movie.trailerUrl) : movie.trailerUrl} />
+                      Your browser does not support the video tag.
+                    </video>
+                  )}
+                </div>
+                <div className="mt-3 text-right">
+                  <button onClick={() => setShowTrailer(false)} className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black">
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
