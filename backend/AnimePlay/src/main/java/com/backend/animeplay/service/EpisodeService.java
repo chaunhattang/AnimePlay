@@ -90,6 +90,12 @@ public class EpisodeService {
                 .collect(Collectors.toList());
     }
 
+    public List<EpisodeResponse> getEpisodesByAnimeId(Integer animeId) {
+        return episodeRepository.findByAnimeIdOrderByEpisodeNumberAsc(animeId).stream()
+                .map(episodeMapper::toEpisodeResponse)
+                .collect(Collectors.toList());
+    }
+
     public String deleteEpisodeById(Integer id) {
         if (!episodeRepository.existsById(id)) {
             throw new AppException(ErrorCode.EPISODE_NOT_FOUND);

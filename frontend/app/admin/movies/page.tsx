@@ -4,7 +4,8 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useAppContext } from "@/components/AppProvider";
 import { Movie } from "@/lib/types";
-import { Film, ShieldCheck, Plus, Save, Trash2, ChevronDown, Image as ImageIcon, Link as LinkIcon, Calendar, Tag, FileText, AlertCircle } from "lucide-react";
+import { Film, ShieldCheck, Plus, Save, Trash2, ChevronDown, Play, Image as ImageIcon, Link as LinkIcon, Calendar, Tag, FileText, AlertCircle } from "lucide-react";
+import { getMediaUrl } from "@/lib/api-client";
 import clsx from "clsx";
 
 type MessageState = {
@@ -14,6 +15,22 @@ type MessageState = {
 
 function MovieRow({ movie, onUpdate, onDelete }: { movie: Movie; onUpdate: (movieId: number, event: FormEvent<HTMLFormElement>) => Promise<void>; onDelete: (movieId: number) => Promise<void> }) {
   const [open, setOpen] = useState(false);
+  const { episodes, createEpisode, deleteEpisode, updateEpisode } = useAppContext();
+
+  const [epNumber, setEpNumber] = useState<number | "">("");
+  const [epVideoType, setEpVideoType] = useState<"LOCAL" | "YOUTUBE" | "WEBSITE">("LOCAL");
+  const [epVideoUrl, setEpVideoUrl] = useState("");
+  const [epFile, setEpFile] = useState<File | null>(null);
+  const [epLoading, setEpLoading] = useState(false);
+  const [epMessage, setEpMessage] = useState<MessageState>(null);
+
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editNumber, setEditNumber] = useState<number | "">("");
+  const [editVideoType, setEditVideoType] = useState<"LOCAL" | "YOUTUBE" | "WEBSITE">("LOCAL");
+  const [editVideoUrl, setEditVideoUrl] = useState("");
+  const [editFile, setEditFile] = useState<File | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editMessage, setEditMessage] = useState<MessageState>(null);
 
   const inputClasses = "w-full rounded-xl border border-white/15 bg-black/40 px-4 py-2.5 text-sm text-white outline-none transition-all duration-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 hover:border-white/25";
   const labelClasses = "mb-1.5 block text-xs font-medium text-gray-400";
@@ -111,6 +128,143 @@ function MovieRow({ movie, onUpdate, onDelete }: { movie: Movie; onUpdate: (movi
             </button>
           </div>
         </form>
+        <div className="border-t border-white/6 px-5 pb-5 pt-4">
+          <h3 className="text-sm font-semibold text-white">Episodes</h3>
+          <div className="mt-3 space-y-2">
+            {episodes.filter((e) => e.animeId === movie.id).length === 0 ? (
+              <div className="text-sm text-gray-400">No episodes yet.</div>
+            ) : (
+              episodes
+                .filter((e) => e.animeId === movie.id)
+                .sort((a, b) => (a.episodeNumber || 0) - (b.episodeNumber || 0))
+                .map((ep) => (
+                  <div key={ep.id} className="rounded-md bg-white/[0.02] p-2">
+                    {editingId === ep.id ? (
+                      <form
+                        onSubmit={async (ev) => {
+                          ev.preventDefault();
+                          if (!editNumber || Number(editNumber) <= 0) {
+                            setEditMessage({ type: "error", text: "Invalid episode number." });
+                            return;
+                          }
+                          setEditLoading(true);
+                          const res = await updateEpisode(ep.id, {
+                            episodeNumber: Number(editNumber),
+                            videoType: editVideoType,
+                            videoUrl: editVideoType === "LOCAL" ? undefined : editVideoUrl,
+                            file: editVideoType === "LOCAL" ? editFile : undefined,
+                          });
+                          if (!res.ok) setEditMessage({ type: "error", text: res.error || "Cannot update episode." });
+                          else setEditMessage({ type: "success", text: "Episode updated." });
+                          setEditLoading(false);
+                          setEditingId(null);
+                        }}
+                        className="grid gap-2 sm:grid-cols-4"
+                      >
+                        <div className="text-sm text-gray-200">Ep</div>
+                        <input value={editNumber as any} onChange={(ev) => setEditNumber(ev.target.value ? Number(ev.target.value) : "")} className={inputClasses} />
+                        <select value={editVideoType} onChange={(ev) => setEditVideoType(ev.target.value as any)} className={inputClasses}>
+                          <option value="LOCAL">Local File</option>
+                          <option value="YOUTUBE">YouTube</option>
+                          <option value="WEBSITE">Website</option>
+                        </select>
+                        {editVideoType === "LOCAL" ? (
+                          <input type="file" accept="video/*" onChange={(ev) => setEditFile(ev.target.files?.[0] || null)} className={inputClasses} />
+                        ) : (
+                          <input value={editVideoUrl} onChange={(ev) => setEditVideoUrl(ev.target.value)} placeholder="Video URL" className={inputClasses} />
+                        )}
+
+                        <div className="sm:col-span-4 mt-2 flex items-center gap-2">
+                          <button type="submit" disabled={editLoading} className="btn-lift inline-flex items-center gap-2 rounded-xl bg-brand-600 px-3 py-1 text-sm font-semibold text-white">
+                            Save
+                          </button>
+                          <button type="button" onClick={() => setEditingId(null)} className="inline-flex items-center gap-2 rounded-xl border px-3 py-1 text-sm">
+                            Cancel
+                          </button>
+                          {editMessage && <span className="ml-3 text-sm text-gray-300">{editMessage.text}</span>}
+                        </div>
+                      </form>
+                    ) : (
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm text-gray-200">Ep {ep.episodeNumber}</div>
+                        <div className="flex items-center gap-2">
+                          <a href={getMediaUrl(ep.videoUrl)} target="_blank" rel="noreferrer" className="text-sm text-gray-400 hover:underline">
+                            {ep.videoUrl?.startsWith("http") ? "External" : ep.videoUrl?.split("/").pop()}
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingId(ep.id);
+                              setEditNumber(ep.episodeNumber || "");
+                              const isLocal = !ep.videoUrl || !ep.videoUrl.startsWith("http");
+                              setEditVideoType(isLocal ? ("LOCAL" as any) : ep.videoUrl.includes("youtube") ? ("YOUTUBE" as any) : ("WEBSITE" as any));
+                              setEditVideoUrl(isLocal ? "" : ep.videoUrl || "");
+                              setEditFile(null);
+                            }}
+                            className="text-yellow-400"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setEpLoading(true);
+                              const res = await deleteEpisode(ep.id);
+                              if (!res.ok) setEpMessage({ type: "error", text: res.error || "Cannot delete episode." });
+                              else setEpMessage({ type: "success", text: "Episode deleted." });
+                              setEpLoading(false);
+                            }}
+                            className="text-red-400"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+            )}
+          </div>
+
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!epNumber || Number(epNumber) <= 0) {
+                setEpMessage({ type: "error", text: "Invalid episode number." });
+                return;
+              }
+              if (epVideoType === "LOCAL" && !epFile) {
+                setEpMessage({ type: "error", text: "Please select a local video file." });
+                return;
+              }
+              setEpLoading(true);
+              const res = await createEpisode({ animeId: movie.id, episodeNumber: Number(epNumber), videoType: epVideoType, videoUrl: epVideoType === "LOCAL" ? undefined : epVideoUrl, file: epVideoType === "LOCAL" ? epFile : undefined });
+              if (!res.ok) setEpMessage({ type: "error", text: res.error || "Cannot create episode." });
+              else setEpMessage({ type: "success", text: "Episode created." });
+              setEpLoading(false);
+              setEpNumber("");
+              setEpVideoUrl("");
+              setEpFile(null);
+            }}
+            className="mt-4 grid gap-2 sm:grid-cols-3"
+          >
+            <input value={epNumber as any} onChange={(ev) => setEpNumber(ev.target.value ? Number(ev.target.value) : "")} placeholder="Episode #" className={inputClasses} />
+            <select value={epVideoType} onChange={(ev) => setEpVideoType(ev.target.value as any)} className={inputClasses}>
+              <option value="LOCAL">Local File</option>
+              <option value="YOUTUBE">YouTube</option>
+              <option value="WEBSITE">Website</option>
+            </select>
+            {epVideoType === "LOCAL" ? <input type="file" accept="video/*" onChange={(ev) => setEpFile(ev.target.files?.[0] || null)} className={inputClasses} /> : <input value={epVideoUrl} onChange={(ev) => setEpVideoUrl(ev.target.value)} placeholder="Video URL" className={inputClasses} />}
+
+            <div className="sm:col-span-3 mt-2">
+              <button type="submit" disabled={epLoading} className="btn-lift inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white">
+                <Play className="h-4 w-4" />
+                {epLoading ? "Uploading..." : "Add Episode"}
+              </button>
+              {epMessage && <span className="ml-3 text-sm text-gray-300">{epMessage.text}</span>}
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

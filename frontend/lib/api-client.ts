@@ -1,4 +1,4 @@
-import { Favorite, Movie, PageResult, User } from "@/lib/types";
+import { Favorite, Movie, PageResult, User, Episode, Review } from "@/lib/types";
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1").replace(/\/$/, "");
 
@@ -182,6 +182,26 @@ export const apiClient = {
     });
   },
 
+  getEpisodesByAnimeId(id: number) {
+    return request<Episode[]>(`/anime/${id}/episodes`, {
+      method: "GET",
+    });
+  },
+
+  getReviewsByAnimeId(id: number) {
+    return request<Review[]>(`/anime/${id}/reviews`, {
+      method: "GET",
+    });
+  },
+
+  createReview(token: string, animeId: number, payload: { rating: number; content?: string }) {
+    return request<Review>(`/anime/${animeId}/reviews`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+      token,
+    });
+  },
+
   createAnime(token: string, formData: FormData) {
     return request<Movie>("/anime", {
       method: "POST",
@@ -222,6 +242,36 @@ export const apiClient = {
 
   removeFavorite(token: string, animeId: number) {
     return request<string>(`/favorites/${animeId}`, {
+      method: "DELETE",
+      token,
+    });
+  },
+  // Episodes
+  getAllEpisodes(token: string) {
+    return request<Episode[]>("/episodes/all", {
+      method: "GET",
+      token,
+    });
+  },
+
+  createEpisode(token: string, formData: FormData) {
+    return request<Episode>("/episodes", {
+      method: "POST",
+      body: formData,
+      token,
+    });
+  },
+
+  updateEpisode(token: string, episodeId: number, formData: FormData) {
+    return request<Episode>(`/episodes/${episodeId}`, {
+      method: "PUT",
+      body: formData,
+      token,
+    });
+  },
+
+  deleteEpisode(token: string, episodeId: number) {
+    return request<string>(`/episodes/${episodeId}`, {
       method: "DELETE",
       token,
     });

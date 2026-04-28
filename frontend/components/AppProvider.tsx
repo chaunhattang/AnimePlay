@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { apiClient, ApiError } from "@/lib/api-client";
-import { Favorite, Movie, User, UserRole } from "@/lib/types";
+import { Favorite, Movie, User, UserRole, Episode } from "@/lib/types";
 
 type AuthLoginInput = {
   accountName: string;
@@ -59,9 +59,11 @@ type AppContextValue = {
   loading: boolean;
   users: User[];
   movies: Movie[];
+  episodes: Episode[];
   favorites: Favorite[];
   currentUser: User | null;
   isAdmin: boolean;
+  getEpisodesByAnimeId: (animeId: number) => Episode[];
   register: (input: AuthRegisterInput) => Promise<ActionResult>;
   login: (input: AuthLoginInput) => Promise<ActionResult>;
   logout: () => void;
@@ -75,6 +77,9 @@ type AppContextValue = {
   createMovie: (input: CreateMovieInput) => Promise<ActionResult>;
   updateMovie: (movieId: number, input: UpdateMovieInput) => Promise<ActionResult>;
   deleteMovie: (movieId: number) => Promise<ActionResult>;
+  createEpisode: (input: { animeId: number; episodeNumber: number; videoType: "LOCAL" | "YOUTUBE" | "WEBSITE"; videoUrl?: string; file?: File | null }) => Promise<ActionResult>;
+  deleteEpisode: (episodeId: number) => Promise<ActionResult>;
+  updateEpisode: (episodeId: number, input: { animeId?: number; episodeNumber?: number; videoType?: "LOCAL" | "YOUTUBE" | "WEBSITE"; videoUrl?: string; file?: File | null }) => Promise<ActionResult>;
 };
 
 const TOKEN_KEY = "animeplay-access-token";
@@ -101,6 +106,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [movies, setMovies] = useState<Movie[]>([]);
+  const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
@@ -131,6 +137,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setUsers(page.content || []);
   }, []);
 
+  const loadEpisodes = useCallback(async (accessToken: string) => {
+    try {
+      const list = await apiClient.getAllEpisodes(accessToken);
+      setEpisodes(list || []);
+    } catch {
+      setEpisodes([]);
+    }
+  }, []);
+
   const loadAuthenticatedData = useCallback(
     async (accessToken: string) => {
       const me = await apiClient.getCurrentUser(accessToken);
@@ -141,6 +156,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       if (me.role === "ADMIN") {
         await loadAdminUsers(accessToken);
+        await loadEpisodes(accessToken);
       } else {
         setUsers([]);
       }
@@ -344,6 +360,62 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const createEpisode = async (input: { animeId: number; episodeNumber: number; videoType: "LOCAL" | "YOUTUBE" | "WEBSITE"; videoUrl?: string; file?: File | null }): Promise<ActionResult> => {
+    if (!token || !isAdmin) {
+      return { ok: false, error: "Admin permission required." };
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append("animeId", String(input.animeId));
+      formData.append("episodeNumber", String(input.episodeNumber));
+      formData.append("videoType", input.videoType);
+      if (input.videoUrl) formData.append("videoUrl", input.videoUrl);
+      if (input.file) formData.append("file", input.file);
+
+      const created = await apiClient.createEpisode(token, formData);
+      setEpisodes((prev) => [created, ...prev]);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: getErrorMessage(error, "Cannot create episode.") };
+    }
+  };
+
+  const deleteEpisode = async (episodeId: number): Promise<ActionResult> => {
+    if (!token || !isAdmin) {
+      return { ok: false, error: "Admin permission required." };
+    }
+
+    try {
+      await apiClient.deleteEpisode(token, episodeId);
+      setEpisodes((prev) => prev.filter((e) => e.id !== episodeId));
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: getErrorMessage(error, "Cannot delete episode.") };
+    }
+  };
+
+  const updateEpisode = async (episodeId: number, input: { animeId?: number; episodeNumber?: number; videoType?: "LOCAL" | "YOUTUBE" | "WEBSITE"; videoUrl?: string; file?: File | null }): Promise<ActionResult> => {
+    if (!token || !isAdmin) {
+      return { ok: false, error: "Admin permission required." };
+    }
+
+    try {
+      const formData = new FormData();
+      if (input.animeId !== undefined) formData.append("animeId", String(input.animeId));
+      if (input.episodeNumber !== undefined) formData.append("episodeNumber", String(input.episodeNumber));
+      if (input.videoType) formData.append("videoType", input.videoType);
+      if (input.videoUrl) formData.append("videoUrl", input.videoUrl);
+      if (input.file) formData.append("file", input.file);
+
+      const updated = await apiClient.updateEpisode(token, episodeId, formData);
+      setEpisodes((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: getErrorMessage(error, "Cannot update episode.") };
+    }
+  };
+
   const updateMovie = async (movieId: number, input: UpdateMovieInput): Promise<ActionResult> => {
     if (!token || !isAdmin) {
       return { ok: false, error: "Admin permission required." };
@@ -388,9 +460,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       loading,
       users,
       movies,
+      episodes,
       favorites,
       currentUser,
       isAdmin,
+      getEpisodesByAnimeId: (animeId: number) => episodes.filter((e) => e.animeId === animeId),
       register,
       login,
       logout,
@@ -404,8 +478,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createMovie,
       updateMovie,
       deleteMovie,
+      createEpisode,
+      deleteEpisode,
+      updateEpisode,
     }),
-    [loading, users, movies, favorites, currentUser, isAdmin],
+    [loading, users, movies, favorites, currentUser, isAdmin, episodes, createEpisode, deleteEpisode, updateEpisode],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

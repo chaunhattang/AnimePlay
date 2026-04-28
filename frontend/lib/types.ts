@@ -31,3 +31,21 @@ export type PageResult<T> = {
   totalElements: number;
   totalPages: number;
 };
+
+export type Episode = {
+  id: number;
+  animeId: number;
+  episodeNumber: number;
+  videoUrl?: string;
+};
+
+export type Review = {
+  id: number;
+  animeId: number;
+  userId: string;
+  username: string;
+  avatarUrl?: string;
+  rating: number;
+  content?: string;
+  createdAt?: string;
+};
