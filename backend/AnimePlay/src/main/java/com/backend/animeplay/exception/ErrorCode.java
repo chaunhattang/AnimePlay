@@ -33,6 +33,8 @@ public enum ErrorCode {
     ANIME_ID_REQUIRED(1017, "Anime id is required", HttpStatus.BAD_REQUEST),
 
     USER_ALREADY_EXISTS(2001, "User already exists", HttpStatus.BAD_REQUEST),
+    USERNAME_ALREADY_EXISTS(2004, "Username already exists", HttpStatus.BAD_REQUEST),
+    EMAIL_ALREADY_EXISTS(2009, "Email already exists", HttpStatus.BAD_REQUEST),
     USER_NOT_FOUND(2002, "User not found", HttpStatus.NOT_FOUND),
     WRONG_PASSWORD(2003, "Wrong password", HttpStatus.FORBIDDEN),
 
@@ -47,6 +49,7 @@ public enum ErrorCode {
     INVALID_REQUEST(3004, "Invalid request", HttpStatus.BAD_REQUEST),
 
     ANIME_NOT_FOUND(4001, "Anime not found", HttpStatus.NOT_FOUND),
+    REVIEW_NOT_FOUND(4003, "Review not found", HttpStatus.NOT_FOUND),
     EPISODE_NOT_FOUND(4002, "Episode not found", HttpStatus.NOT_FOUND),
     ;
 

@@ -66,6 +66,7 @@ type AppContextValue = {
   getEpisodesByAnimeId: (animeId: number) => Episode[];
   register: (input: AuthRegisterInput) => Promise<ActionResult>;
   login: (input: AuthLoginInput) => Promise<ActionResult>;
+  googleLogin: (token: string) => Promise<ActionResult>;
   logout: () => void;
   updateProfile: (input: ProfileUpdateInput) => Promise<ActionResult>;
   toggleWatchlist: (movieId: number) => Promise<ActionResult>;
@@ -216,6 +217,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const googleLogin = async (idToken: string): Promise<ActionResult> => {
+    try {
+      const response = await apiClient.googleLogin(idToken);
+      setToken(response.token);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(TOKEN_KEY, response.token);
+      }
+      await loadAuthenticatedData(response.token);
+      return { ok: true };
+    } catch (error) {
+      clearSession();
+      return { ok: false, error: getErrorMessage(error, "Google login failed.") };
+    }
+  };
+
   const logout = () => {
     clearSession();
   };
@@ -275,18 +291,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return { ok: false, error: "Admin permission required." };
     }
     try {
-      const formData = new FormData();
-      appendIfPresent(formData, "username", input.username);
-      appendIfPresent(formData, "email", input.email);
-      appendIfPresent(formData, "fullName", input.fullName);
-      appendIfPresent(formData, "password", input.password);
-      appendIfPresent(formData, "role", input.role);
+      // Create user via JSON payload to match backend `/auth/create` which expects JSON
+      const payload = {
+        username: input.username,
+        email: input.email,
+        password: input.password,
+        fullName: input.fullName,
+        role: input.role,
+        avatarUrl: input.avatarUrl,
+      };
+
+      const created = await apiClient.createUser(token, payload);
+
+      // If an avatar file was provided, upload it using the update endpoint which accepts multipart/form-data
+      let finalUser = created;
       if (input.avatarFile) {
-        formData.append("file", input.avatarFile);
+        const fileForm = new FormData();
+        fileForm.append("file", input.avatarFile);
+        const updated = await apiClient.updateUser(token, created.id, fileForm);
+        finalUser = updated;
       }
 
-      const created = await apiClient.createUser(token, formData);
-      setUsers((prev) => [created, ...prev]);
+      setUsers((prev) => [finalUser, ...prev]);
       return { ok: true };
     } catch (error) {
       return { ok: false, error: getErrorMessage(error, "Cannot create user.") };
@@ -360,7 +386,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const createEpisode = async (input: { animeId: number; episodeNumber: number; videoType: "LOCAL" | "YOUTUBE" | "WEBSITE"; videoUrl?: string; file?: File | null }): Promise<ActionResult> => {
+  const createEpisode = async (input: { animeId: number; episodeNumber: number; name?: string; videoType: "LOCAL" | "YOUTUBE" | "WEBSITE"; videoUrl?: string; file?: File | null }): Promise<ActionResult> => {
     if (!token || !isAdmin) {
       return { ok: false, error: "Admin permission required." };
     }
@@ -369,6 +395,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const formData = new FormData();
       formData.append("animeId", String(input.animeId));
       formData.append("episodeNumber", String(input.episodeNumber));
+      if (input.name) formData.append("name", input.name);
       formData.append("videoType", input.videoType);
       if (input.videoUrl) formData.append("videoUrl", input.videoUrl);
       if (input.file) formData.append("file", input.file);
@@ -395,7 +422,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateEpisode = async (episodeId: number, input: { animeId?: number; episodeNumber?: number; videoType?: "LOCAL" | "YOUTUBE" | "WEBSITE"; videoUrl?: string; file?: File | null }): Promise<ActionResult> => {
+  const updateEpisode = async (episodeId: number, input: { animeId?: number; episodeNumber?: number; name?: string; videoType?: "LOCAL" | "YOUTUBE" | "WEBSITE"; videoUrl?: string; file?: File | null }): Promise<ActionResult> => {
     if (!token || !isAdmin) {
       return { ok: false, error: "Admin permission required." };
     }
@@ -404,6 +431,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const formData = new FormData();
       if (input.animeId !== undefined) formData.append("animeId", String(input.animeId));
       if (input.episodeNumber !== undefined) formData.append("episodeNumber", String(input.episodeNumber));
+      if (input.name !== undefined) formData.append("name", String(input.name));
       if (input.videoType) formData.append("videoType", input.videoType);
       if (input.videoUrl) formData.append("videoUrl", input.videoUrl);
       if (input.file) formData.append("file", input.file);
@@ -467,6 +495,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       getEpisodesByAnimeId: (animeId: number) => episodes.filter((e) => e.animeId === animeId),
       register,
       login,
+      googleLogin,
       logout,
       updateProfile,
       toggleWatchlist,

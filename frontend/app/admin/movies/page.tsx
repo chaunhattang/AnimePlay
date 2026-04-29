@@ -17,10 +17,11 @@ function MovieRow({ movie, onUpdate, onDelete }: { movie: Movie; onUpdate: (movi
   const [open, setOpen] = useState(false);
   const { episodes, createEpisode, deleteEpisode, updateEpisode } = useAppContext();
 
-  const [epNumber, setEpNumber] = useState<number | "">("");
+  const [epNumber, setEpNumber] = useState<number | "">();
   const [epVideoType, setEpVideoType] = useState<"LOCAL" | "YOUTUBE" | "WEBSITE">("LOCAL");
   const [epVideoUrl, setEpVideoUrl] = useState("");
   const [epFile, setEpFile] = useState<File | null>(null);
+  const [epName, setEpName] = useState("");
   const [epLoading, setEpLoading] = useState(false);
   const [epMessage, setEpMessage] = useState<MessageState>(null);
 
@@ -29,6 +30,7 @@ function MovieRow({ movie, onUpdate, onDelete }: { movie: Movie; onUpdate: (movi
   const [editVideoType, setEditVideoType] = useState<"LOCAL" | "YOUTUBE" | "WEBSITE">("LOCAL");
   const [editVideoUrl, setEditVideoUrl] = useState("");
   const [editFile, setEditFile] = useState<File | null>(null);
+  const [editName, setEditName] = useState("");
   const [editLoading, setEditLoading] = useState(false);
   const [editMessage, setEditMessage] = useState<MessageState>(null);
 
@@ -150,6 +152,7 @@ function MovieRow({ movie, onUpdate, onDelete }: { movie: Movie; onUpdate: (movi
                           setEditLoading(true);
                           const res = await updateEpisode(ep.id, {
                             episodeNumber: Number(editNumber),
+                            name: editName,
                             videoType: editVideoType,
                             videoUrl: editVideoType === "LOCAL" ? undefined : editVideoUrl,
                             file: editVideoType === "LOCAL" ? editFile : undefined,
@@ -159,10 +162,11 @@ function MovieRow({ movie, onUpdate, onDelete }: { movie: Movie; onUpdate: (movi
                           setEditLoading(false);
                           setEditingId(null);
                         }}
-                        className="grid gap-2 sm:grid-cols-4"
+                        className="grid gap-2 sm:grid-cols-5"
                       >
                         <div className="text-sm text-gray-200">Ep</div>
                         <input value={editNumber as any} onChange={(ev) => setEditNumber(ev.target.value ? Number(ev.target.value) : "")} className={inputClasses} />
+                        <input value={editName} onChange={(ev) => setEditName(ev.target.value)} placeholder="Episode name" className={inputClasses} />
                         <select value={editVideoType} onChange={(ev) => setEditVideoType(ev.target.value as any)} className={inputClasses}>
                           <option value="LOCAL">Local File</option>
                           <option value="YOUTUBE">YouTube</option>
@@ -186,7 +190,7 @@ function MovieRow({ movie, onUpdate, onDelete }: { movie: Movie; onUpdate: (movi
                       </form>
                     ) : (
                       <div className="flex items-center justify-between gap-3">
-                        <div className="text-sm text-gray-200">Ep {ep.episodeNumber}</div>
+                        <div className="text-sm text-gray-200">{ep.name ? ep.name : `Ep ${ep.episodeNumber}`}</div>
                         <div className="flex items-center gap-2">
                           <a href={getMediaUrl(ep.videoUrl)} target="_blank" rel="noreferrer" className="text-sm text-gray-400 hover:underline">
                             {ep.videoUrl?.startsWith("http") ? "External" : ep.videoUrl?.split("/").pop()}
@@ -200,6 +204,7 @@ function MovieRow({ movie, onUpdate, onDelete }: { movie: Movie; onUpdate: (movi
                               setEditVideoType(isLocal ? ("LOCAL" as any) : ep.videoUrl.includes("youtube") ? ("YOUTUBE" as any) : ("WEBSITE" as any));
                               setEditVideoUrl(isLocal ? "" : ep.videoUrl || "");
                               setEditFile(null);
+                              setEditName(ep.name || "");
                             }}
                             className="text-yellow-400"
                           >
@@ -229,26 +234,30 @@ function MovieRow({ movie, onUpdate, onDelete }: { movie: Movie; onUpdate: (movi
           <form
             onSubmit={async (e) => {
               e.preventDefault();
-              if (!epNumber || Number(epNumber) <= 0) {
-                setEpMessage({ type: "error", text: "Invalid episode number." });
-                return;
+
+              let finalEpNumber = Number(epNumber);
+              if (!finalEpNumber || finalEpNumber <= 0) {
+                finalEpNumber = 200;
               }
+
               if (epVideoType === "LOCAL" && !epFile) {
                 setEpMessage({ type: "error", text: "Please select a local video file." });
                 return;
               }
               setEpLoading(true);
-              const res = await createEpisode({ animeId: movie.id, episodeNumber: Number(epNumber), videoType: epVideoType, videoUrl: epVideoType === "LOCAL" ? undefined : epVideoUrl, file: epVideoType === "LOCAL" ? epFile : undefined });
+              const res = await createEpisode({ animeId: movie.id, episodeNumber: Number(finalEpNumber), name: epName, videoType: epVideoType, videoUrl: epVideoType === "LOCAL" ? undefined : epVideoUrl, file: epVideoType === "LOCAL" ? epFile : undefined });
               if (!res.ok) setEpMessage({ type: "error", text: res.error || "Cannot create episode." });
               else setEpMessage({ type: "success", text: "Episode created." });
               setEpLoading(false);
               setEpNumber("");
               setEpVideoUrl("");
               setEpFile(null);
+              setEpName("");
             }}
-            className="mt-4 grid gap-2 sm:grid-cols-3"
+            className="mt-4 grid gap-2 sm:grid-cols-4"
           >
-            <input value={epNumber as any} onChange={(ev) => setEpNumber(ev.target.value ? Number(ev.target.value) : "")} placeholder="Episode #" className={inputClasses} />
+            <input value={epName} onChange={(ev) => setEpName(ev.target.value)} placeholder="Episode name (optional)" className={inputClasses} />
+            <input value={epNumber} onChange={(ev) => setEpNumber(ev.target.value ? Number(ev.target.value) : 1)} placeholder="Episode # (Optional)" className={inputClasses} />
             <select value={epVideoType} onChange={(ev) => setEpVideoType(ev.target.value as any)} className={inputClasses}>
               <option value="LOCAL">Local File</option>
               <option value="YOUTUBE">YouTube</option>
@@ -305,7 +314,8 @@ export default function AdminMoviesPage() {
   const onCreateMovie = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitting(true);
-    const formData = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
     const result = await createMovie({
       title: String(formData.get("title") || ""),
       year: String(formData.get("year") || ""),
@@ -321,7 +331,7 @@ export default function AdminMoviesPage() {
       return;
     }
 
-    event.currentTarget.reset();
+    form.reset();
     setMessage({ type: "success", text: "Movie created successfully!" });
     setSubmitting(false);
   };

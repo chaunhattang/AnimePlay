@@ -58,4 +58,34 @@ public class ReviewService {
         review = reviewRepository.save(review);
         return reviewMapper.toReviewResponse(review);
     }
+
+    @Transactional
+    public ReviewResponse updateReview(Integer reviewId, ReviewCreateRequest request) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new AppException(ErrorCode.REVIEW_NOT_FOUND));
+
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
+        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!isAdmin && !review.getUser().getId().equals(userId)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        if (request.getRating() != null)
+            review.setRating(request.getRating());
+        if (request.getContent() != null)
+            review.setContent(request.getContent());
+
+        review = reviewRepository.save(review);
+        return reviewMapper.toReviewResponse(review);
+    }
+
+    @Transactional
+    public String deleteReviewById(Integer reviewId) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new AppException(ErrorCode.REVIEW_NOT_FOUND));
+        reviewRepository.deleteById(reviewId);
+        return "Deleted Review Successfully by Review Id: " + reviewId;
+    }
 }

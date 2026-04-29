@@ -148,7 +148,8 @@ export default function AdminUsersPage() {
   const onCreateUser = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitting(true);
-    const formData = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
     const result = await createUser({
       fullName: String(formData.get("fullName") || ""),
       username: String(formData.get("username") || ""),
@@ -164,7 +165,7 @@ export default function AdminUsersPage() {
       return;
     }
 
-    event.currentTarget.reset();
+    form.reset();
     setMessage({ type: "success", text: "User created successfully!" });
     setSubmitting(false);
   };

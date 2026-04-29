@@ -17,6 +17,7 @@ export type Movie = {
   genre: string;
   posterUrl?: string;
   trailerUrl?: string;
+  averageRating?: number;
 };
 
 export type Favorite = {
@@ -36,6 +37,7 @@ export type Episode = {
   id: number;
   animeId: number;
   episodeNumber: number;
+  name?: string;
   videoUrl?: string;
 };
 

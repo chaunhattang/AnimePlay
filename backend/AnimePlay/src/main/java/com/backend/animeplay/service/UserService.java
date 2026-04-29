@@ -32,6 +32,7 @@ public class UserService {
     UserMapper userMapper;
     FileStorageService fileStorageService;
     PasswordEncoder passwordEncoder;
+    com.backend.animeplay.repository.ReviewRepository reviewRepository;
 
     public UserResponse registerUser(UserCreateRequest request) {
         return createUser(request, RoleEnum.USER);
@@ -45,8 +46,11 @@ public class UserService {
         String username = normalize(request.getUsername());
         String email = normalize(request.getEmail()).toLowerCase();
 
-        if (userRepository.existsByUsername(username) || userRepository.existsByEmail(email)) {
-            throw new AppException(ErrorCode.USER_ALREADY_EXISTS);
+        if (userRepository.existsByUsername(username)) {
+            throw new AppException(ErrorCode.USERNAME_ALREADY_EXISTS);
+        }
+        if (userRepository.existsByEmail(email)) {
+            throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
         }
 
         User user = userMapper.toUser(request);
@@ -95,7 +99,7 @@ public class UserService {
         if (hasText(request.getUsername())) {
             String username = normalize(request.getUsername());
             if (userRepository.existsByUsernameAndIdNot(username, id)) {
-                throw new AppException(ErrorCode.USER_ALREADY_EXISTS);
+                throw new AppException(ErrorCode.USERNAME_ALREADY_EXISTS);
             }
             user.setUsername(username);
         }
@@ -103,7 +107,7 @@ public class UserService {
         if (hasText(request.getEmail())) {
             String email = normalize(request.getEmail()).toLowerCase();
             if (userRepository.existsByEmailAndIdNot(email, id)) {
-                throw new AppException(ErrorCode.USER_ALREADY_EXISTS);
+                throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
             }
             user.setEmail(email);
         }
@@ -122,8 +126,7 @@ public class UserService {
             if (!isAdmin) {
                 if (request.getOldPassword() == null
                         || request.getOldPassword().trim().isEmpty()
-                        || !passwordEncoder.matches(request.getOldPassword(), user.getPassword())
-                ) {
+                        || !passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
                     throw new AppException(ErrorCode.WRONG_PASSWORD);
                 }
             }
@@ -141,6 +144,7 @@ public class UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
+    @Transactional
     public String deleteById(String id) {
         if (!userRepository.existsById(id)) {
             throw new AppException(ErrorCode.USER_NOT_FOUND);
@@ -148,6 +152,14 @@ public class UserService {
         if (id.equals(getAuthenticatedUserId())) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
+
+        // Clear user references from reviews so comments remain (anonymized)
+        try {
+            reviewRepository.clearUserFromReviews(id);
+        } catch (Exception ex) {
+            log.warn("Failed to clear user references from reviews for user {}: {}", id, ex.getMessage());
+        }
+
         userRepository.deleteById(id);
         return "Deleted User Successfully by User Id: " + id;
     }

@@ -16,7 +16,7 @@ import { apiClient, getMediaUrl } from "@/lib/api-client";
 export default function MovieDetailPage() {
   const params = useParams<{ id: string }>();
   const movieId = Number(params.id);
-  const { movies, currentUser } = useAppContext();
+  const { movies, currentUser, isAdmin } = useAppContext();
 
   const movie = movies.find((item) => item.id === movieId);
 
@@ -144,6 +144,46 @@ export default function MovieDetailPage() {
     }
   };
 
+  const handleDeleteReview = async (reviewId: number) => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("animeplay-access-token") : null;
+    if (!token) {
+      alert("Bạn cần đăng nhập để thực hiện hành động này.");
+      return;
+    }
+    if (!confirm("Are you sure you want to delete this comment?")) return;
+    try {
+      await apiClient.deleteReview(token, movie.id, reviewId);
+      setReviews((prev) => prev.filter((r) => r.id !== reviewId));
+    } catch (err) {
+      alert("Không thể xóa bình luận.");
+    }
+  };
+
+  const handleEditReview = async (review: any) => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("animeplay-access-token") : null;
+    if (!token) {
+      alert("Bạn cần đăng nhập để thực hiện hành động này.");
+      return;
+    }
+
+    const newContent = prompt("Edit comment:", review.content || "");
+    if (newContent === null) return; // cancelled
+    const newRatingStr = prompt("Rating (0-10):", String(review.rating || 0));
+    if (newRatingStr === null) return;
+    const newRating = Number(newRatingStr);
+    if (isNaN(newRating) || newRating < 0 || newRating > 10) {
+      alert("Invalid rating.");
+      return;
+    }
+
+    try {
+      const updated = await apiClient.updateReview(token, movie.id, review.id, { rating: newRating, content: newContent });
+      setReviews((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+    } catch (err) {
+      alert("Không thể cập nhật bình luận.");
+    }
+  };
+
   return (
     <div className="animate-fade-in-up space-y-10">
       {/* Movie Details */}
@@ -201,7 +241,7 @@ export default function MovieDetailPage() {
                       params.set("episodeId", String(ep.id));
                       return (
                         <Link key={ep.id} href={`/watch?${params.toString()}`} className="inline-flex items-center justify-center rounded-lg border border-white/6 bg-white/[0.02] px-4 py-2 text-sm text-gray-300 hover:bg-white/5">
-                          Episode {ep.episodeNumber}
+                          {ep.name ? ep.name : `Episode ${ep.episodeNumber}`}
                         </Link>
                       );
                     })}
@@ -238,8 +278,18 @@ export default function MovieDetailPage() {
                         <div className="text-xs text-gray-400">{r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}</div>
                       </div>
                     </div>
-                    <div>
+                    <div className="flex items-center gap-2">
                       <RatingStars rating={r.rating || 0} />
+                      {isAdmin ? (
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => void handleEditReview(r)} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-1 text-xs text-white/80">
+                            Edit
+                          </button>
+                          <button onClick={() => void handleDeleteReview(r.id)} className="inline-flex items-center gap-2 rounded-xl border border-red-400/30 px-3 py-1 text-xs text-red-300">
+                            Delete
+                          </button>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                   {r.content ? <div className="mt-2 text-sm text-gray-300">{r.content}</div> : null}

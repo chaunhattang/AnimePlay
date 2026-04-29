@@ -4,16 +4,19 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppContext } from "@/components/AppProvider";
+import Script from "next/script";
+import ForgotPasswordModal from "@/components/ForgotPasswordModal";
 import { LogIn, User, Lock, ArrowRight, Film } from "lucide-react";
 import clsx from "clsx";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { currentUser, login } = useAppContext();
+  const { currentUser, login, googleLogin } = useAppContext();
   const [accountName, setAccountName] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -36,6 +39,54 @@ export default function LoginPage() {
     router.push("/");
   };
 
+  const handleGoogleCredential = async (response: any) => {
+    const token = response?.credential;
+    if (!token) return;
+    setSubmitting(true);
+    setError("");
+    const result = await googleLogin(token);
+    if (!result.ok) {
+      setError(result.error || "Google login failed.");
+      setSubmitting(false);
+      return;
+    }
+    router.push("/");
+  };
+
+  // Initialize Google Identity Services button after the script loads
+  useEffect(() => {
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!clientId) return;
+
+    const tryInit = () => {
+      // @ts-ignore
+      if (typeof window !== "undefined" && (window as any).google && (window as any).google.accounts) {
+        // @ts-ignore
+        (window as any).google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleGoogleCredential,
+        });
+        // @ts-ignore
+        (window as any).google.accounts.id.renderButton(document.getElementById("googleSignInDiv"), {
+          theme: "outline",
+          size: "large",
+        });
+      }
+    };
+
+    if (typeof window !== "undefined" && (window as any).google) {
+      tryInit();
+    } else {
+      const id = setInterval(() => {
+        if ((window as any).google) {
+          tryInit();
+          clearInterval(id);
+        }
+      }, 250);
+      return () => clearInterval(id);
+    }
+  }, [handleGoogleCredential]);
+
   const inputClasses = "w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 pl-11 text-sm text-white placeholder:text-gray-500 outline-none transition-all duration-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 hover:border-white/25";
 
   return (
@@ -55,6 +106,7 @@ export default function LoginPage() {
         </div>
 
         <div className="space-y-5 p-6">
+          <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
           <form onSubmit={onSubmit} className="space-y-4">
             {/* Account Name Field */}
             <div className="space-y-1.5">
@@ -80,6 +132,12 @@ export default function LoginPage() {
               </div>
             </div>
 
+            <div className="text-right">
+              <button type="button" onClick={() => setShowForgot(true)} className="text-sm text-brand-500">
+                Forgot password?
+              </button>
+            </div>
+
             {/* Error Message */}
             {error && <div className="animate-shake rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>}
 
@@ -102,6 +160,19 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          {/* Separator and Google sign-in below the form */}
+          <div className="mt-4">
+            <div className="flex items-center gap-3">
+              <span className="flex-1 h-px bg-white/10" />
+              <span className="text-sm text-gray-400">or</span>
+              <span className="flex-1 h-px bg-white/10" />
+            </div>
+
+            <div className="mt-4 flex justify-center">{process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ? <div id="googleSignInDiv" /> : null}</div>
+          </div>
+
+          <ForgotPasswordModal visible={showForgot} onClose={() => setShowForgot(false)} />
 
           {/* Register Link */}
           <div className="flex items-center justify-center gap-2 border-t border-white/10 pt-5 text-sm">

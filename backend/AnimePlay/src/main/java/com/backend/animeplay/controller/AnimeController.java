@@ -109,6 +109,27 @@ public class AnimeController {
                                 .build();
         }
 
+        @PutMapping(value = "/{id}/reviews/{reviewId}")
+        public ApiResponse<ReviewResponse> updateReview(@PathVariable("id") Integer id,
+                        @PathVariable("reviewId") Integer reviewId,
+                        @RequestBody ReviewCreateRequest request) {
+                request.setAnimeId(id);
+                return ApiResponse.<ReviewResponse>builder()
+                                .result(reviewService.updateReview(reviewId, request))
+                                .message("Updated Review Successfully")
+                                .build();
+        }
+
+        @DeleteMapping(value = "/{id}/reviews/{reviewId}")
+        @PreAuthorize("hasRole('ADMIN')")
+        public ApiResponse<String> deleteReview(@PathVariable("id") Integer id,
+                        @PathVariable("reviewId") Integer reviewId) {
+                return ApiResponse.<String>builder()
+                                .result(reviewService.deleteReviewById(reviewId))
+                                .message("Review Deleted Successfully")
+                                .build();
+        }
+
         @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
         @PreAuthorize("hasRole('ADMIN')")
         public ApiResponse<AnimeResponse> updateAnimeById(

@@ -123,6 +123,13 @@ export const apiClient = {
     });
   },
 
+  googleLogin(token: string) {
+    return request<{ token: string }>("/auth/google", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    });
+  },
+
   getCurrentUser(token: string) {
     return request<User>("/users/me", {
       method: "GET",
@@ -199,6 +206,42 @@ export const apiClient = {
       method: "POST",
       body: JSON.stringify(payload),
       token,
+    });
+  },
+
+  updateReview(token: string, animeId: number, reviewId: number, payload: { rating: number; content?: string }) {
+    return request<Review>(`/anime/${animeId}/reviews/${reviewId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+      token,
+    });
+  },
+
+  deleteReview(token: string, animeId: number, reviewId: number) {
+    return request<string>(`/anime/${animeId}/reviews/${reviewId}`, {
+      method: "DELETE",
+      token,
+    });
+  },
+
+  requestPasswordReset(email: string) {
+    return request<string>(`/auth/forgot-password`, {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  verifyOtp(email: string, otp: number) {
+    return request<string>(`/auth/verify-otp`, {
+      method: "POST",
+      body: JSON.stringify({ email, otp }),
+    });
+  },
+
+  changePassword(resetToken: string, newPassword: string) {
+    return request<string>(`/auth/change-password`, {
+      method: "POST",
+      body: JSON.stringify({ resetToken, newPassword }),
     });
   },
 

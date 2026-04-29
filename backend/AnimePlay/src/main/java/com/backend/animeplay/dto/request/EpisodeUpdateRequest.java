@@ -17,6 +17,8 @@ public class EpisodeUpdateRequest {
     @Positive(message = "EPISODE_NUMBER_INVALID")
     Integer episodeNumber;
 
+    String name;
+
     String videoUrl;
 
     VideoEnum videoType;

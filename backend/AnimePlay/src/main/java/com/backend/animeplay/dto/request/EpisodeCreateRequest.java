@@ -20,6 +20,8 @@ public class EpisodeCreateRequest {
     @Positive(message = "EPISODE_NUMBER_INVALID")
     Integer episodeNumber;
 
+    String name;
+
     String videoUrl;
 
     @NotNull(message = "VIDEO_TYPE_REQUIRED")

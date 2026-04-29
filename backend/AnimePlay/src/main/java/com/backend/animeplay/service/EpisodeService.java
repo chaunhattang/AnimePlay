@@ -60,6 +60,9 @@ public class EpisodeService {
         if (request.getEpisodeNumber() != null) {
             episode.setEpisodeNumber(request.getEpisodeNumber());
         }
+        if (request.getName() != null) {
+            episode.setName(request.getName());
+        }
         if (request.getAnimeId() != null) {
             Anime anime = animeRepository.findById(request.getAnimeId())
                     .orElseThrow(() -> new AppException(ErrorCode.ANIME_NOT_FOUND));

@@ -6,6 +6,7 @@ import { Clock3 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Movie } from "@/lib/types";
 import WatchlistButton from "@/components/WatchlistButton";
+import RatingStars from "@/components/RatingStars";
 import { getMediaUrl } from "@/lib/api-client";
 
 type MovieCardProps = {
@@ -50,10 +51,17 @@ export default function MovieCard({ movie }: MovieCardProps) {
         </div>
 
         <div className="flex items-center justify-between">
-          <p className="inline-flex items-center gap-1.5 text-xs text-gray-400">
-            <Clock3 className="h-3 w-3 text-brand-500/70" />
-            {movie.year}
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="inline-flex items-center gap-1.5 text-xs text-gray-400">
+              <Clock3 className="h-3 w-3 text-brand-500/70" />
+              {movie.year}
+            </p>
+            {movie.averageRating !== undefined ? (
+              <div className="inline-flex items-center gap-2">
+                <RatingStars rating={movie.averageRating} />
+              </div>
+            ) : null}
+          </div>
           <WatchlistButton movieId={movie.id} />
         </div>
       </div>

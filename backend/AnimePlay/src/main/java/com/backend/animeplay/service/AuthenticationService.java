@@ -73,13 +73,26 @@ public class AuthenticationService {
                 .build();
     }
 
-
     public AuthenticationResponse authenticateWithGoogle(GoogleLoginRequest request) {
         try {
-            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier
-                    .Builder(new NetHttpTransport(), new GsonFactory())
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(),
+                    new GsonFactory())
                     .setAudience(Collections.singletonList(GOOGLE_CLIENT_ID))
                     .build();
+            // Try parsing the token first to log payload details for debugging (no
+            // signature verification)
+            try {
+                GoogleIdToken parsed = GoogleIdToken.parse(new GsonFactory(), request.getToken());
+                if (parsed != null && parsed.getPayload() != null) {
+                    GoogleIdToken.Payload p = parsed.getPayload();
+                    log.info("Google token payload: email={}, aud={}, azp={}, iss={}, exp={}", p.getEmail(),
+                            p.getAudience(), p.getAuthorizedParty(), p.getIssuer(), p.getExpirationTimeSeconds());
+                } else {
+                    log.warn("Parsed GoogleIdToken is null or has no payload");
+                }
+            } catch (Exception ex) {
+                log.warn("Failed to parse Google id token: {}", ex.getMessage());
+            }
 
             GoogleIdToken idToken = verifier.verify(request.getToken());
             if (idToken == null) {
