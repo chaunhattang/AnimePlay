@@ -1,0 +1,6 @@
+@AnimePlay_HostAddress = http://localhost:5105
+
+GET {{AnimePlay_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
