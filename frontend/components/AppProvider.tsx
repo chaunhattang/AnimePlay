@@ -64,6 +64,7 @@ type AppContextValue = {
   currentUser: User | null;
   isAdmin: boolean;
   getEpisodesByAnimeId: (animeId: number) => Episode[];
+  updateMovieRating: (movieId: number, average: number) => void;
   register: (input: AuthRegisterInput) => Promise<ActionResult>;
   login: (input: AuthLoginInput) => Promise<ActionResult>;
   googleLogin: (token: string) => Promise<ActionResult>;
@@ -483,6 +484,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateMovieRating = useCallback((movieId: number, average: number) => {
+    setMovies((prev) => prev.map((item) => (item.id === movieId ? { ...item, averageRating: average } : item)));
+    setFavorites((prev) => prev.map((favorite) => (favorite.anime.id === movieId ? { ...favorite, anime: { ...favorite.anime, averageRating: average } } : favorite)));
+  }, []);
+
   const value = useMemo<AppContextValue>(
     () => ({
       loading,
@@ -507,11 +513,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createMovie,
       updateMovie,
       deleteMovie,
+      updateMovieRating,
       createEpisode,
       deleteEpisode,
       updateEpisode,
     }),
-    [loading, users, movies, favorites, currentUser, isAdmin, episodes, createEpisode, deleteEpisode, updateEpisode],
+    [loading, users, movies, favorites, currentUser, isAdmin, episodes, createEpisode, deleteEpisode, updateEpisode, updateMovieRating],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

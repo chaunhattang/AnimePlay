@@ -16,7 +16,7 @@ import { apiClient, getMediaUrl } from "@/lib/api-client";
 export default function MovieDetailPage() {
   const params = useParams<{ id: string }>();
   const movieId = Number(params.id);
-  const { movies, currentUser, isAdmin } = useAppContext();
+  const { movies, currentUser, isAdmin, updateMovieRating } = useAppContext();
 
   const movie = movies.find((item) => item.id === movieId);
 
@@ -134,7 +134,14 @@ export default function MovieDetailPage() {
     setCreatingReview(true);
     try {
       const created = await apiClient.createReview(token, movie.id, { rating: newReviewRating, content: newReviewContent });
-      setReviews((prev) => [created, ...prev]);
+      setReviews((prev) => {
+        const newReviews = [created, ...prev];
+        const avg = newReviews.length ? newReviews.reduce((s, r) => s + (r.rating || 0), 0) / newReviews.length : 0;
+        try {
+          updateMovieRating(movie.id, avg);
+        } catch {}
+        return newReviews;
+      });
       setNewReviewContent("");
       setNewReviewRating(8);
     } catch (err) {
@@ -153,7 +160,14 @@ export default function MovieDetailPage() {
     if (!confirm("Are you sure you want to delete this comment?")) return;
     try {
       await apiClient.deleteReview(token, movie.id, reviewId);
-      setReviews((prev) => prev.filter((r) => r.id !== reviewId));
+      setReviews((prev) => {
+        const newReviews = prev.filter((r) => r.id !== reviewId);
+        const avg = newReviews.length ? newReviews.reduce((s, r) => s + (r.rating || 0), 0) / newReviews.length : 0;
+        try {
+          updateMovieRating(movie.id, avg);
+        } catch {}
+        return newReviews;
+      });
     } catch (err) {
       alert("Không thể xóa bình luận.");
     }
@@ -178,7 +192,14 @@ export default function MovieDetailPage() {
 
     try {
       const updated = await apiClient.updateReview(token, movie.id, review.id, { rating: newRating, content: newContent });
-      setReviews((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+      setReviews((prev) => {
+        const newReviews = prev.map((r) => (r.id === updated.id ? updated : r));
+        const avg = newReviews.length ? newReviews.reduce((s, r) => s + (r.rating || 0), 0) / newReviews.length : 0;
+        try {
+          updateMovieRating(movie.id, avg);
+        } catch {}
+        return newReviews;
+      });
     } catch (err) {
       alert("Không thể cập nhật bình luận.");
     }
