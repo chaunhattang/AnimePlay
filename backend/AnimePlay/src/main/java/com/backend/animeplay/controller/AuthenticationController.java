@@ -14,10 +14,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
 @Slf4j
 @RestController
@@ -29,15 +31,17 @@ public class AuthenticationController {
     AuthenticationService authenticationService;
 
     @PostMapping("/register")
+    @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<UserResponse> register(@RequestBody @Valid UserCreateRequest request) {
         return ApiResponse.<UserResponse>builder()
-                .result(userService.createUser(request))
+                .code(201)
+                .result(userService.registerUser(request))
                 .message("Register Successfully")
                 .build();
     }
 
     @PostMapping("/login")
-    public ApiResponse<AuthenticationResponse> authenticate(@RequestBody AuthenticationRequest request) {
+    public ApiResponse<AuthenticationResponse> authenticate(@RequestBody @Valid AuthenticationRequest request) {
         return ApiResponse.<AuthenticationResponse>builder()
                 .result(authenticationService.authenticate(request))
                 .message("Login Successfully")
@@ -45,7 +49,7 @@ public class AuthenticationController {
     }
 
     @PostMapping("/google")
-    public ApiResponse<AuthenticationResponse> googleLogin(@RequestBody GoogleLoginRequest request) {
+    public ApiResponse<AuthenticationResponse> googleLogin(@RequestBody @Valid GoogleLoginRequest request) {
         return ApiResponse.<AuthenticationResponse>builder()
                 .result(authenticationService.authenticateWithGoogle(request))
                 .message("Google Login Successfully")
@@ -53,9 +57,11 @@ public class AuthenticationController {
     }
 
     @PostMapping("/create")
-    @PreAuthorize("hasAuthority('SCOPE_ROLE_ADMIN')")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<UserResponse> create(@RequestBody @Valid UserCreateRequest request) {
         return ApiResponse.<UserResponse>builder()
+                .code(201)
                 .result(userService.createUser(request))
                 .message("Create Successfully")
                 .build();

@@ -4,13 +4,19 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppContext } from "@/components/AppProvider";
+import Script from "next/script";
+import ForgotPasswordModal from "@/components/ForgotPasswordModal";
+import { LogIn, User, Lock, ArrowRight, Film } from "lucide-react";
+import clsx from "clsx";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { currentUser, login, loginWithGoogle } = useAppContext();
-  const [username, setUsername] = useState("");
+  const { currentUser, login, googleLogin } = useAppContext();
+  const [accountName, setAccountName] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -18,66 +24,166 @@ export default function LoginPage() {
     }
   }, [currentUser, router]);
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const result = login({ username, password });
+    setSubmitting(true);
+    setError("");
+
+    const result = await login({ accountName, password });
     if (!result.ok) {
       setError(result.error || "Login failed.");
+      setSubmitting(false);
+      return;
+    }
+
+    router.push("/");
+  };
+
+  const handleGoogleCredential = async (response: any) => {
+    const token = response?.credential;
+    if (!token) return;
+    setSubmitting(true);
+    setError("");
+    const result = await googleLogin(token);
+    if (!result.ok) {
+      setError(result.error || "Google login failed.");
+      setSubmitting(false);
       return;
     }
     router.push("/");
   };
 
-  const onGoogleLogin = () => {
-    loginWithGoogle();
-    router.push("/");
-  };
+  // Initialize Google Identity Services button after the script loads
+  useEffect(() => {
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!clientId) return;
+
+    const tryInit = () => {
+      // @ts-ignore
+      if (typeof window !== "undefined" && (window as any).google && (window as any).google.accounts) {
+        // @ts-ignore
+        (window as any).google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleGoogleCredential,
+        });
+        // @ts-ignore
+        (window as any).google.accounts.id.renderButton(document.getElementById("googleSignInDiv"), {
+          theme: "outline",
+          size: "large",
+        });
+      }
+    };
+
+    if (typeof window !== "undefined" && (window as any).google) {
+      tryInit();
+    } else {
+      const id = setInterval(() => {
+        if ((window as any).google) {
+          tryInit();
+          clearInterval(id);
+        }
+      }, 250);
+      return () => clearInterval(id);
+    }
+  }, [handleGoogleCredential]);
+
+  const inputClasses = "w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 pl-11 text-sm text-white placeholder:text-gray-500 outline-none transition-all duration-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 hover:border-white/25";
 
   return (
-    <div className="mx-auto w-full max-w-md space-y-5 rounded-lg border border-white/10 bg-white/5 p-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold">Login</h1>
-        <p className="text-sm text-gray-400">Use your username/password or Google login.</p>
+    <div className="mx-auto w-full max-w-md">
+      {/* Animated card container */}
+      <div className="animate-scale-in overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-card backdrop-blur">
+        {/* Header with gradient */}
+        <div className="relative overflow-hidden border-b border-white/10 bg-gradient-to-r from-brand-600/20 via-purple-600/10 to-transparent px-6 py-8 text-center">
+          <div className="absolute -right-4 -top-4 h-24 w-24 animate-spin-slow rounded-full border-2 border-brand-500/20" />
+          <div className="absolute -bottom-6 -left-6 h-16 w-16 animate-spin-slow rounded-full border-2 border-purple-500/20 [animation-direction:reverse]" />
+
+          <div className="relative mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-600 shadow-glow">
+            <Film className="h-7 w-7 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-white">Welcome Back</h1>
+          <p className="mt-1 text-sm text-gray-400">Sign in to continue your anime journey</p>
+        </div>
+
+        <div className="space-y-5 p-6">
+          <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
+          <form onSubmit={onSubmit} className="space-y-4">
+            {/* Account Name Field */}
+            <div className="space-y-1.5">
+              <label htmlFor="accountName" className="flex items-center gap-2 text-sm font-medium text-gray-300">
+                <User className="h-4 w-4 text-brand-500" />
+                Username or Email
+                <span className="text-brand-500">*</span>
+              </label>
+              <div className="relative">
+                <input id="accountName" value={accountName} onChange={(event) => setAccountName(event.target.value)} placeholder="Enter your username or email" className={clsx(inputClasses, error && "border-red-500/50")} required autoComplete="username" />
+              </div>
+            </div>
+
+            {/* Password Field */}
+            <div className="space-y-1.5">
+              <label htmlFor="password" className="flex items-center gap-2 text-sm font-medium text-gray-300">
+                <Lock className="h-4 w-4 text-brand-500" />
+                Password
+                <span className="text-brand-500">*</span>
+              </label>
+              <div className="relative">
+                <input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" className={clsx(inputClasses, error && "border-red-500/50")} required autoComplete="current-password" />
+              </div>
+            </div>
+
+            <div className="text-right">
+              <button type="button" onClick={() => setShowForgot(true)} className="text-sm text-brand-500">
+                Forgot password?
+              </button>
+            </div>
+
+            {/* Error Message */}
+            {error && <div className="animate-shake rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>}
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={submitting}
+              className={clsx("btn-lift flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition-all duration-200", "hover:bg-brand-500 focus:ring-2 focus:ring-brand-500/30", submitting && "cursor-not-allowed opacity-70")}
+            >
+              {submitting ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  <LogIn className="h-4 w-4" />
+                  Sign In
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Separator and Google sign-in below the form */}
+          <div className="mt-4">
+            <div className="flex items-center gap-3">
+              <span className="flex-1 h-px bg-white/10" />
+              <span className="text-sm text-gray-400">or</span>
+              <span className="flex-1 h-px bg-white/10" />
+            </div>
+
+            <div className="mt-4 flex justify-center">{process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ? <div id="googleSignInDiv" /> : null}</div>
+          </div>
+
+          <ForgotPasswordModal visible={showForgot} onClose={() => setShowForgot(false)} />
+
+          {/* Register Link */}
+          <div className="flex items-center justify-center gap-2 border-t border-white/10 pt-5 text-sm">
+            <span className="text-gray-400">Don&apos;t have an account?</span>
+            <Link href="/register" className="group inline-flex items-center gap-1 font-medium text-brand-500 transition hover:text-brand-400">
+              Create one
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </div>
+        </div>
       </div>
-
-      <form onSubmit={onSubmit} className="space-y-3">
-        <input
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-          placeholder="Username"
-          className="w-full rounded-md border border-white/15 bg-black px-3 py-2 text-sm"
-          required
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder="Password"
-          className="w-full rounded-md border border-white/15 bg-black px-3 py-2 text-sm"
-          required
-        />
-        <button type="submit" className="w-full rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white">
-          Login
-        </button>
-      </form>
-
-      <button
-        type="button"
-        onClick={onGoogleLogin}
-        className="w-full rounded-md border border-white/20 px-4 py-2 text-sm font-semibold hover:bg-white/10"
-      >
-        Login with Google
-      </button>
-
-      {error ? <p className="text-sm text-red-300">{error}</p> : null}
-
-      <p className="text-sm text-gray-300">
-        No account?{" "}
-        <Link href="/register" className="text-brand-500 hover:text-brand-600">
-          Register now
-        </Link>
-      </p>
-      <p className="text-xs text-gray-500">Demo admin: admin / admin123</p>
     </div>
   );
 }

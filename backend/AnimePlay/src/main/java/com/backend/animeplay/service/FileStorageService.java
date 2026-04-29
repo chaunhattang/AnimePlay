@@ -18,20 +18,33 @@ import java.util.UUID;
 public class FileStorageService {
 
     private final String VIDEO_UPLOAD_DIR = "uploads/videos/";
+    private final String IMAGE_UPLOAD_DIR = "uploads/images/";
 
     public String storeVideoFile(MultipartFile file) {
+        return storeFile(file, VIDEO_UPLOAD_DIR, "/videos/");
+    }
+
+    public String storeImageFile(MultipartFile file) {
+        return storeFile(file, IMAGE_UPLOAD_DIR, "/images/");
+    }
+
+    private String storeFile(MultipartFile file, String uploadDir, String publicPrefix) {
         try {
-            Path uploadPath = Paths.get(VIDEO_UPLOAD_DIR);
+            Path uploadPath = Paths.get(uploadDir);
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
             }
 
-            String uniqueFileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+            String originalName = file.getOriginalFilename();
+            String safeName = originalName == null
+                    ? "file"
+                    : Paths.get(originalName).getFileName().toString().replaceAll("[^a-zA-Z0-9._-]", "_");
+            String uniqueFileName = UUID.randomUUID() + "_" + safeName;
             Path filePath = uploadPath.resolve(uniqueFileName);
 
             Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
-            return "/videos/" + uniqueFileName;
+            return publicPrefix + uniqueFileName;
         } catch (IOException e) {
             log.error("Could not store file", e);
             throw new AppException(ErrorCode.INVALID_REQUEST);

@@ -4,6 +4,7 @@ import com.backend.animeplay.dto.request.UserUpdateRequest;
 import com.backend.animeplay.dto.response.ApiResponse;
 import com.backend.animeplay.dto.response.UserResponse;
 import com.backend.animeplay.service.UserService;
+import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -43,11 +44,29 @@ public class UserController {
                 .build();
     }
 
+    @GetMapping("/me")
+    public ApiResponse<UserResponse> getCurrentUser() {
+        return ApiResponse.<UserResponse>builder()
+                .result(userService.getCurrentUser())
+                .message("Current User Got Successfully")
+                .build();
+    }
+
+    @PutMapping(value = "/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<UserResponse> updateCurrentUser(
+            @ModelAttribute @Valid UserUpdateRequest request,
+            @RequestParam(value = "file", required = false) MultipartFile file) {
+        return ApiResponse.<UserResponse>builder()
+                .result(userService.updateCurrentUser(request, file))
+                .message("Current User Updated Successfully")
+                .build();
+    }
+
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ADMIN') or #id == authentication.name")
     public ApiResponse<UserResponse> updateUserByUsername(
             @PathVariable("id") String id,
-            @ModelAttribute UserUpdateRequest request,
+            @ModelAttribute @Valid UserUpdateRequest request,
             @RequestParam(value = "file", required = false) MultipartFile file) {
         return ApiResponse.<UserResponse>builder()
                 .result(userService.updateUserById(id, request, file))
@@ -62,5 +81,17 @@ public class UserController {
                 .result(userService.deleteById(id))
                 .message("User Deleted Successfully")
                 .build();
+    }
+
+    @GetMapping("/test-file")
+    public String testFile() {
+        // Lấy đúng tên file mà lúc nãy trình duyệt báo lỗi
+        String fileName = "c59e8ee5-b485-4ee2-8ff9-02bd2957e749_anh-cho-cute-de-thuong.jpg";
+
+        java.io.File file = new java.io.File("uploads/images/" + fileName);
+
+        return "<h1>Kết quả kiểm tra:</h1>" +
+                "<p>Đường dẫn thư mục Spring Boot đang tìm kiếm là: <b>" + file.getAbsolutePath() + "</b></p>" +
+                "<p>File này có thực sự tồn tại ở đó không? : <b>" + (file.exists() ? "CÓ TỒN TẠI ✅" : "KHÔNG TỒN TẠI ❌") + "</b></p>";
     }
 }

@@ -1,5 +1,6 @@
 package com.backend.animeplay.dto.request;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
@@ -11,9 +12,10 @@ import lombok.experimental.FieldDefaults;
 @Getter
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class VerifyOtpRequest {
-    @NotBlank(message = "Email is not blank")
+    @NotBlank(message = "EMAIL_INVALID")
+    @Email(message = "EMAIL_INVALID")
     String email;
 
-    @NotNull(message = "Code OTP is not blank")
+    @NotNull(message = "INVALID_REQUEST")
     Integer otp;
 }

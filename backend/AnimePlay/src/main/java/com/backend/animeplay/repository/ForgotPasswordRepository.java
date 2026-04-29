@@ -12,6 +12,8 @@ public interface ForgotPasswordRepository extends JpaRepository<ForgotPassword, 
 
     Optional<ForgotPassword> findByResetToken(String resetToken);
 
+    Optional<ForgotPassword> findByUser_Id(String userId);
+
     @Transactional
     void deleteByExpirationTimeBefore(Date currentTime);
 }

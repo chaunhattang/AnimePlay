@@ -16,5 +16,7 @@ public class EpisodeResponse {
 
     Integer episodeNumber;
 
+    String name;
+
     String videoUrl;
 }

@@ -75,6 +75,9 @@ public class FavoriteService {
     @Transactional
     public String deleteFavoriteById(Integer animeId) {
         String userId = SecurityContextHolder.getContext().getAuthentication().getName();
+        if (!favoriteRepository.existsByUser_IdAndAnime_Id(userId, animeId)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
         favoriteRepository.deleteByUser_IdAndAnime_Id(userId, animeId);
         return "Deleted Favorite Successfully by Anime Id: " + animeId;
     }

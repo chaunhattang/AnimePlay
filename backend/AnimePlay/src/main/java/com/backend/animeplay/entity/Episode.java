@@ -22,5 +22,8 @@ public class Episode {
 
     Integer episodeNumber;
 
+    @Column(columnDefinition = "TEXT")
+    String name;
+
     String videoUrl;
 }

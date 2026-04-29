@@ -17,4 +17,5 @@ public class AnimeResponse {
     String genre;
     String posterUrl;
     String trailerUrl;
+    Double averageRating;
 }

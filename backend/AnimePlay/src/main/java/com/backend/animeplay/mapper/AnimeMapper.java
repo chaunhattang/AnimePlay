@@ -12,7 +12,6 @@ public interface AnimeMapper {
 
     AnimeResponse toAnimeResponse(Anime anime);
 
-    @Mapping(target = "posterUrl", ignore = true)
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateAnime(@MappingTarget Anime anime, AnimeUpdateRequest request);
 }

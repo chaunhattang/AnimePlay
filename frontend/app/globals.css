@@ -11,3 +11,190 @@ body {
   background: #0b0b0f;
   color: #f3f4f6;
 }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a24;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+/* Skeleton Shimmer Loading */
+.skeleton-shimmer {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 25%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.03) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+/* Stagger children animations */
+.stagger-children > * {
+  opacity: 0;
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+.stagger-children > *:nth-child(1) {
+  animation-delay: 0.05s;
+}
+.stagger-children > *:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.stagger-children > *:nth-child(3) {
+  animation-delay: 0.15s;
+}
+.stagger-children > *:nth-child(4) {
+  animation-delay: 0.2s;
+}
+.stagger-children > *:nth-child(5) {
+  animation-delay: 0.25s;
+}
+.stagger-children > *:nth-child(6) {
+  animation-delay: 0.3s;
+}
+.stagger-children > *:nth-child(7) {
+  animation-delay: 0.35s;
+}
+.stagger-children > *:nth-child(8) {
+  animation-delay: 0.4s;
+}
+
+/* Card hover image zoom */
+.card-image-zoom {
+  transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.group:hover .card-image-zoom {
+  transform: scale(1.08);
+}
+
+/* Form field floating label */
+.floating-label-group {
+  position: relative;
+}
+
+.floating-label-group input:focus ~ .floating-label,
+.floating-label-group input:not(:placeholder-shown) ~ .floating-label,
+.floating-label-group textarea:focus ~ .floating-label,
+.floating-label-group textarea:not(:placeholder-shown) ~ .floating-label,
+.floating-label-group select:focus ~ .floating-label,
+.floating-label-group select:not([value=""]) ~ .floating-label {
+  transform: translateY(-1.5rem) scale(0.85);
+  color: #ef4444;
+}
+
+/* Link hover underline animation */
+.link-underline {
+  position: relative;
+}
+
+.link-underline::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: #ef4444;
+  transition:
+    width 0.3s ease,
+    left 0.3s ease;
+}
+
+.link-underline:hover::after {
+  width: 100%;
+  left: 0;
+}
+
+/* Glass morphism variants */
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-strong {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Focus ring animation */
+.input-focus-ring {
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.input-focus-ring:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+}
+
+/* Button lift effect */
+.btn-lift {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.btn-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
+}
+
+.btn-lift:active {
+  transform: translateY(0);
+}
+
+/* Pulse glow for prominent buttons */
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 0 0 0 rgba(239, 68, 68, 0);
+  }
+  50% {
+    box-shadow: 0 12px 30px rgba(239, 68, 68, 0.12);
+  }
+  100% {
+    box-shadow: 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2.5s ease-in-out infinite;
+}
+
+/* Respect user preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    animation: none !important;
+  }
+  .stagger-children > * {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .btn-lift,
+  .btn-lift:hover,
+  .card-image-zoom,
+  .group:hover .card-image-zoom,
+  .link-underline::after,
+  .input-focus-ring {
+    transition: none !important;
+    animation: none !important;
+    box-shadow: none !important;
+  }
+  * {
+    scroll-behavior: auto !important;
+  }
+}

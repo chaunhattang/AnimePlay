@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,12 +27,14 @@ public class EpisodeServiceController {
     EpisodeService episodeService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<EpisodeResponse> createEpisode(
             @ModelAttribute @Valid EpisodeCreateRequest request,
             @RequestPart(value = "file", required = false) MultipartFile file
     ) {
         return ApiResponse.<EpisodeResponse>builder()
+                .code(201)
                 .result(episodeService.createEpisode(request, file))
                 .message("Created Episode Successfully")
                 .build();
@@ -41,7 +44,7 @@ public class EpisodeServiceController {
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<EpisodeResponse> updateEpisodeById(
             @PathVariable("id") Integer id,
-            @ModelAttribute EpisodeUpdateRequest request,
+            @ModelAttribute @Valid EpisodeUpdateRequest request,
             @RequestPart(value = "file", required = false) MultipartFile file
     ) {
         return ApiResponse.<EpisodeResponse>builder()

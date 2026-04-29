@@ -4,9 +4,11 @@ import com.backend.animeplay.dto.request.FavoriteRequest;
 import com.backend.animeplay.dto.response.ApiResponse;
 import com.backend.animeplay.dto.response.FavoriteResponse;
 import com.backend.animeplay.service.FavoriteService;
+import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,8 +21,10 @@ public class FavoriteController {
     FavoriteService favoriteService;
 
     @PostMapping
-    public ApiResponse<FavoriteResponse> addFavorite(@RequestBody FavoriteRequest request) {
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<FavoriteResponse> addFavorite(@RequestBody @Valid FavoriteRequest request) {
         return ApiResponse.<FavoriteResponse>builder()
+                .code(201)
                 .result(favoriteService.addFavorite(request))
                 .message("Added Favorite Successfully")
                 .build();

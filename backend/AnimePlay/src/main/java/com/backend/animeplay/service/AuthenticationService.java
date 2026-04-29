@@ -25,7 +25,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.Date;
 
@@ -43,15 +42,16 @@ public class AuthenticationService {
 
     @NonFinal
     @Value("${jwt.valid-duration}")
-    private long VALID_DURATION;
+    private long VALID_DURATION_SECONDS;
 
     @NonFinal
     @Value("${google.client-id}")
     private String GOOGLE_CLIENT_ID;
 
     private User getUser(AuthenticationRequest request) {
-        return userRepository.findByUsername(request.getAccountName())
-                .orElseGet(() -> userRepository.findByEmail(request.getAccountName())
+        String accountName = request.getAccountName().trim();
+        return userRepository.findByUsername(accountName)
+                .orElseGet(() -> userRepository.findByEmail(accountName.toLowerCase())
                         .orElse(null));
     }
 
@@ -73,13 +73,26 @@ public class AuthenticationService {
                 .build();
     }
 
-
     public AuthenticationResponse authenticateWithGoogle(GoogleLoginRequest request) {
         try {
-            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier
-                    .Builder(new NetHttpTransport(), new GsonFactory())
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(),
+                    new GsonFactory())
                     .setAudience(Collections.singletonList(GOOGLE_CLIENT_ID))
                     .build();
+            // Try parsing the token first to log payload details for debugging (no
+            // signature verification)
+            try {
+                GoogleIdToken parsed = GoogleIdToken.parse(new GsonFactory(), request.getToken());
+                if (parsed != null && parsed.getPayload() != null) {
+                    GoogleIdToken.Payload p = parsed.getPayload();
+                    log.info("Google token payload: email={}, aud={}, azp={}, iss={}, exp={}", p.getEmail(),
+                            p.getAudience(), p.getAuthorizedParty(), p.getIssuer(), p.getExpirationTimeSeconds());
+                } else {
+                    log.warn("Parsed GoogleIdToken is null or has no payload");
+                }
+            } catch (Exception ex) {
+                log.warn("Failed to parse Google id token: {}", ex.getMessage());
+            }
 
             GoogleIdToken idToken = verifier.verify(request.getToken());
             if (idToken == null) {
@@ -134,7 +147,7 @@ public class AuthenticationService {
                 .subject(user.getId())
                 .issuer("anime-play")
                 .issueTime(new Date())
-                .expirationTime(new Date(Instant.now().plus(VALID_DURATION, ChronoUnit.HOURS).toEpochMilli()))
+                .expirationTime(new Date(Instant.now().plusSeconds(VALID_DURATION_SECONDS).toEpochMilli()))
                 .claim("role", user.getRole().name())
                 .build();
 

@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -24,21 +25,30 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import javax.crypto.spec.SecretKeySpec;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class SecurityConfig {
-    final String[] PUBLIC_ENDPOINTS = {
+    final String[] PUBLIC_POST_ENDPOINTS = {
             "/auth/login", "/auth/register", "/auth/google",
             "/auth/forgot-password", "/auth/verify-otp", "/auth/change-password"
+    };
+    final String[] PUBLIC_GET_ENDPOINTS = {
+            "/anime/**", "/episodes/**", "/videos/**", "/images/**", "/uploads/**"
     };
 
     @NonFinal
     @Value("${jwt.signerKey}")
     protected String SIGNER_KEY;
+
+    @NonFinal
+    @Value("${app.cors.allowed-origins:http://localhost:3000}")
+    protected String ALLOWED_ORIGINS;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -68,6 +78,13 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
+        List<String> allowedOrigins = Arrays.stream(ALLOWED_ORIGINS.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .collect(Collectors.toList());
+//        configuration.setAllowedOriginPatterns(
+//                allowedOrigins.isEmpty() ? List.of("http://localhost:3000") : allowedOrigins
+//        );
         configuration.setAllowedOriginPatterns(List.of("*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 
@@ -86,10 +103,14 @@ public class SecurityConfig {
         httpSecurity.csrf(AbstractHttpConfigurer::disable);
 
         httpSecurity.authorizeHttpRequests(request -> request
-                .requestMatchers(HttpMethod.POST, PUBLIC_ENDPOINTS).permitAll()
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers(HttpMethod.POST, PUBLIC_POST_ENDPOINTS).permitAll()
+                .requestMatchers(HttpMethod.GET, PUBLIC_GET_ENDPOINTS).permitAll()
                 .requestMatchers("/error").permitAll()
                 .anyRequest().authenticated()
         );
+        httpSecurity.sessionManagement(session ->
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         httpSecurity.oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwtConfigurer -> jwtConfigurer.decoder(jwtDecoder())

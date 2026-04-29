@@ -1,41 +1,53 @@
-export type Movie = {
-  id: string;
-  title: string;
-  year: number;
-  duration: string;
-  rating: number;
-  votes: string;
-  genres: string[];
-  language: string;
-  country: string;
-  storyline: string;
-  cast: string[];
-  director: string;
-  trailerYoutubeId: string;
-  poster: string;
-  backdrop: string;
-  badge?: "Now Playing" | "Top Rated" | "Trending";
-};
-
-export type UserRole = "admin" | "user";
+export type UserRole = "ADMIN" | "USER";
 
 export type User = {
   id: string;
   username: string;
   email: string;
-  password: string;
   fullName: string;
-  avatar: string;
+  avatarUrl?: string;
   role: UserRole;
-  watchlistIds: string[];
-  createdAt: string;
 };
 
-export type MovieReview = {
-  id: string;
-  movieId: string;
+export type Movie = {
+  id: number;
+  title: string;
+  description: string;
+  year: string;
+  genre: string;
+  posterUrl?: string;
+  trailerUrl?: string;
+  averageRating?: number;
+};
+
+export type Favorite = {
+  id: number;
+  anime: Movie;
+};
+
+export type PageResult<T> = {
+  content: T[];
+  number: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
+export type Episode = {
+  id: number;
+  animeId: number;
+  episodeNumber: number;
+  name?: string;
+  videoUrl?: string;
+};
+
+export type Review = {
+  id: number;
+  animeId: number;
   userId: string;
+  username: string;
+  avatarUrl?: string;
   rating: number;
-  comment?: string;
-  createdAt: string;
+  content?: string;
+  createdAt?: string;
 };
