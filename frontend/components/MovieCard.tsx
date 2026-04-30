@@ -29,7 +29,7 @@ export default function MovieCard({ movie }: MovieCardProps) {
     >
       {/* Image Container */}
       <Link href={`/movies/${movie.id}`} className="relative block overflow-hidden">
-        <div className="relative aspect-[2/3]">
+        <div className="relative aspect-[4/5]">
           <Image src={posterUrl} alt={movie.title} fill className="object-cover transition-transform duration-500 ease-out group-hover:scale-110" />
           {/* Hover gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />

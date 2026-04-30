@@ -16,7 +16,7 @@ import { apiClient, getMediaUrl } from "@/lib/api-client";
 export default function MovieDetailPage() {
   const params = useParams<{ id: string }>();
   const movieId = Number(params.id);
-  const { movies, currentUser, isAdmin, updateMovieRating } = useAppContext();
+  const { movies, currentUser, isAdmin } = useAppContext();
 
   const movie = movies.find((item) => item.id === movieId);
 
@@ -134,14 +134,7 @@ export default function MovieDetailPage() {
     setCreatingReview(true);
     try {
       const created = await apiClient.createReview(token, movie.id, { rating: newReviewRating, content: newReviewContent });
-      setReviews((prev) => {
-        const newReviews = [created, ...prev];
-        const avg = newReviews.length ? newReviews.reduce((s, r) => s + (r.rating || 0), 0) / newReviews.length : 0;
-        try {
-          updateMovieRating(movie.id, avg);
-        } catch {}
-        return newReviews;
-      });
+      setReviews((prev) => [created, ...prev]);
       setNewReviewContent("");
       setNewReviewRating(8);
     } catch (err) {
@@ -160,14 +153,7 @@ export default function MovieDetailPage() {
     if (!confirm("Are you sure you want to delete this comment?")) return;
     try {
       await apiClient.deleteReview(token, movie.id, reviewId);
-      setReviews((prev) => {
-        const newReviews = prev.filter((r) => r.id !== reviewId);
-        const avg = newReviews.length ? newReviews.reduce((s, r) => s + (r.rating || 0), 0) / newReviews.length : 0;
-        try {
-          updateMovieRating(movie.id, avg);
-        } catch {}
-        return newReviews;
-      });
+      setReviews((prev) => prev.filter((r) => r.id !== reviewId));
     } catch (err) {
       alert("Không thể xóa bình luận.");
     }
@@ -192,14 +178,7 @@ export default function MovieDetailPage() {
 
     try {
       const updated = await apiClient.updateReview(token, movie.id, review.id, { rating: newRating, content: newContent });
-      setReviews((prev) => {
-        const newReviews = prev.map((r) => (r.id === updated.id ? updated : r));
-        const avg = newReviews.length ? newReviews.reduce((s, r) => s + (r.rating || 0), 0) / newReviews.length : 0;
-        try {
-          updateMovieRating(movie.id, avg);
-        } catch {}
-        return newReviews;
-      });
+      setReviews((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
     } catch (err) {
       alert("Không thể cập nhật bình luận.");
     }
@@ -355,15 +334,25 @@ export default function MovieDetailPage() {
         ? createPortal(
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
               <div className="w-full max-w-4xl">
-                <div className="aspect-video rounded-lg overflow-hidden bg-black">
-                  {getYouTubeEmbedUrl(movie.trailerUrl) ? (
-                    <iframe className="w-full h-full" src={getYouTubeEmbedUrl(movie.trailerUrl) || ""} title={`Trailer ${movie.title}`} frameBorder={0} allowFullScreen />
-                  ) : (
-                    <video controls className="w-full h-full">
-                      <source src={movie.trailerUrl && !movie.trailerUrl.startsWith("http") ? getMediaUrl(movie.trailerUrl) : movie.trailerUrl} />
-                      Your browser does not support the video tag.
-                    </video>
-                  )}
+                <div className="aspect-video rounded-lg overflow-hidden bg-black relative">
+                  {(() => {
+                    const url = movie.trailerUrl;
+                    if (!url) return <div className="flex h-full w-full items-center justify-center text-gray-500">Chưa có video</div>;
+                    const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
+                    const isExternalEmbed = url.startsWith("http") && !isYouTube;
+                    if (isYouTube) {
+                      return <iframe className="absolute inset-0 w-full h-full" src={getYouTubeEmbedUrl(url) || ""} title={`Trailer ${movie.title}`} frameBorder={0} allowFullScreen />;
+                    }
+                    if (isExternalEmbed) {
+                      return <iframe className="absolute inset-0 w-full h-full" src={url} title={`Phim ${movie.title}`} frameBorder={0} allowFullScreen />;
+                    }
+                    return (
+                      <video controls className="absolute inset-0 w-full h-full object-contain">
+                        <source src={getMediaUrl(url)} type="video/mp4" />
+                        Trình duyệt của bạn không hỗ trợ thẻ video.
+                      </video>
+                    );
+                  })()}
                 </div>
                 <div className="mt-3 text-right">
                   <button onClick={() => setShowTrailer(false)} className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black">

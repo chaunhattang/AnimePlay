@@ -45,7 +45,7 @@ export default function MovieGrid({ movies }: MovieGridProps) {
   }
 
   return (
-    <motion.div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4" variants={containerVariants} initial={reduceMotion ? "visible" : "hidden"} whileInView={"visible"} viewport={{ once: true, amount: 0.2 }}>
+    <motion.div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 " variants={containerVariants} initial={reduceMotion ? "visible" : "hidden"} whileInView={"visible"} viewport={{ once: true, amount: 0.2 }}>
       {movies.map((movie) => (
         <motion.div key={movie.id} variants={itemVariants}>
           <MovieCard movie={movie} />

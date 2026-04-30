@@ -41,15 +41,16 @@ function HomeSkeleton() {
 export default function HomePage() {
   const { movies, loading } = useAppContext();
 
-  const featured = movies[0];
+  const featuredList = movies.slice(0, Math.min(6, movies.length));
   const latest = [...movies].sort((a, b) => (Number(b.year) || 0) - (Number(a.year) || 0)).slice(0, 4);
   const classics = [...movies].sort((a, b) => a.title.localeCompare(b.title)).slice(0, 4);
+  const topRated = [...movies].sort((a, b) => (Number(b.averageRating) || 0) - (Number(a.averageRating) || 0)).slice(0, 4);
 
   if (loading) {
     return <HomeSkeleton />;
   }
 
-  if (!featured) {
+  if (!featuredList.length) {
     return (
       <div className="animate-fade-in-up flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] py-20 shadow-card">
         <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5">
@@ -64,7 +65,7 @@ export default function HomePage() {
   return (
     <div className="space-y-12">
       {/* Hero Section */}
-      <HeroSection movie={featured} />
+      <HeroSection movies={featuredList} />
 
       {/* Latest Updates */}
       <section className="animate-fade-in-up space-y-5" style={{ animationDelay: "0.1s" }}>
@@ -82,16 +83,15 @@ export default function HomePage() {
         </div>
         <MovieGrid movies={latest} />
       </section>
-
-      {/* A-Z Collection */}
+      {/* Top Rated Movies */}
       <section className="animate-fade-in-up space-y-5" style={{ animationDelay: "0.2s" }}>
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-600/20">
-            <Sparkles className="h-4 w-4 text-purple-400" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-yellow-500/20">
+            <Sparkles className="h-4 w-4 text-yellow-400" />
           </div>
-          <h2 className="text-xl font-semibold text-white">A-Z Collection</h2>
+          <h2 className="text-xl font-semibold text-white">Top Rated Movies</h2>
         </div>
-        <MovieGrid movies={classics} />
+        <MovieGrid movies={topRated} />
       </section>
     </div>
   );
