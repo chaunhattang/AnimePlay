@@ -21,4 +21,6 @@ public interface ReviewRepository extends JpaRepository<Review, Integer> {
     @Transactional
     @Query("update Review r set r.anime = null where r.anime.id = :animeId")
     void clearAnimeFromReviews(@Param("animeId") Integer animeId);
+
+    void deleteByUserId(String id);
 }

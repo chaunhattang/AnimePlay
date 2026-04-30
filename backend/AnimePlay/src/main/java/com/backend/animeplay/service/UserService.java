@@ -8,6 +8,8 @@ import com.backend.animeplay.enums.RoleEnum;
 import com.backend.animeplay.exception.AppException;
 import com.backend.animeplay.exception.ErrorCode;
 import com.backend.animeplay.mapper.UserMapper;
+import com.backend.animeplay.repository.FavoriteRepository;
+import com.backend.animeplay.repository.ReviewRepository;
 import com.backend.animeplay.repository.UserRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +34,8 @@ public class UserService {
     UserMapper userMapper;
     FileStorageService fileStorageService;
     PasswordEncoder passwordEncoder;
-    com.backend.animeplay.repository.ReviewRepository reviewRepository;
+    ReviewRepository reviewRepository;
+    FavoriteRepository favoriteRepository;
 
     public UserResponse registerUser(UserCreateRequest request) {
         return createUser(request, RoleEnum.USER);
@@ -153,7 +156,8 @@ public class UserService {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
-        // Clear user references from reviews so comments remain (anonymized)
+        favoriteRepository.deleteByUserId(id);
+        reviewRepository.deleteByUserId(id);
         try {
             reviewRepository.clearUserFromReviews(id);
         } catch (Exception ex) {

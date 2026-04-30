@@ -23,4 +23,6 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Integer> {
     @Transactional
     @Query("delete from Favorite f where f.anime.id = :animeId")
     void deleteByAnimeId(@Param("animeId") Integer animeId);
+
+    void deleteByUserId(String id);
 }
