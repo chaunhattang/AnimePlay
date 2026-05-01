@@ -1,6 +1,8 @@
 import { Favorite, Movie, PageResult, User, Episode, Review } from "@/lib/types";
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1").replace(/\/$/, "");
+// const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1").replace(/\/$/, "");
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 type ApiEnvelope<T> = {
   code: number;

@@ -27,7 +27,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import javax.crypto.spec.SecretKeySpec;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Configuration
 @EnableWebSecurity
@@ -81,7 +80,7 @@ public class SecurityConfig {
         List<String> allowedOrigins = Arrays.stream(ALLOWED_ORIGINS.split(","))
                 .map(String::trim)
                 .filter(origin -> !origin.isEmpty())
-                .collect(Collectors.toList());
+                .toList();
 //        configuration.setAllowedOriginPatterns(
 //                allowedOrigins.isEmpty() ? List.of("http://localhost:3000") : allowedOrigins
 //        );

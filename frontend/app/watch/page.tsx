@@ -29,9 +29,9 @@ export default function WatchPage() {
         {!videoUrlParam ? (
           <div className="flex h-full w-full items-center justify-center text-gray-500">Không tìm thấy link video</div>
         ) : youtubeEmbed ? (
-          <iframe className="absolute inset-0 w-full h-full" src={youtubeEmbed} title={`Video player ${episodeId}`} frameBorder={0} allowFullScreen />
+          <iframe className="absolute inset-0 w-full h-full" referrerPolicy="strict-origin-when-cross-origin" src={youtubeEmbed} title={`Video player ${episodeId}`} frameBorder={0} allowFullScreen />
         ) : isExternalEmbed ? (
-          <iframe className="absolute inset-0 w-full h-full" src={videoUrlParam} title={`Video player ${episodeId}`} frameBorder={0} allowFullScreen />
+          <iframe className="absolute inset-0 w-full h-full" referrerPolicy="strict-origin-when-cross-origin" src={videoUrlParam} title={`Video player ${episodeId}`} frameBorder={0} allowFullScreen />
         ) : (
           <video controls autoPlay className="absolute inset-0 w-full h-full object-contain">
             <source src={resolvedSrc} type="video/mp4" />
