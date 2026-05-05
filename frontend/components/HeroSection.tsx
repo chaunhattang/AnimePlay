@@ -122,7 +122,7 @@ export default function HeroSection({ movies, initialIndex = 0, autoRotate = tru
       </div>
 
       {/* Content */}
-      <div className={`relative z-30 flex min-h-[400px] flex-col justify-end px-6 py-10 transition-opacity duration-700 sm:min-h-[450px] sm:px-10 sm:pb-12 ${hovering ? "opacity-0" : "opacity-100"}`}>
+      <div className={`relative z-30 flex min-h-[400px] flex-col justify-end px-6 py-10 transition-opacity duration-700 sm:min-h-[450px] sm:px-10 sm:pb-12 opacity-100`}>
         <div className="max-w-2xl space-y-5">
           <div className="animate-fade-in" style={{ animationDelay: "0.1s" }}>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-600/90 px-3 py-1 text-xs font-semibold text-white shadow-glow backdrop-blur-sm">
